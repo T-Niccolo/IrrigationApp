@@ -13,47 +13,21 @@ from shapely.geometry import Point
 
 #Irr app
 
-def initialize_ee():
-    try:
-        import streamlit as st
-        import json
-        import re
-        
-        # Print available secrets for debugging
-        print("Available secrets:", list(st.secrets.keys()))
-        
-        # Get service account email
-        service_account = st.secrets["EE_SERVICE_ACCOUNT"]
-        
-        # Get credentials from JSON string
-        try:
-            credentials_json = st.secrets["EE_CREDENTIALS_JSON"]
-            # Clean the JSON string - replace literal \n with actual newlines
-            # and remove any problematic control characters
-            credentials_json = credentials_json.replace('\\n', '\n')
-            credentials_json = re.sub(r'[\x00-\x1F\x7F]', '', credentials_json)
-            credentials_dict = json.loads(credentials_json)
-            print("Successfully parsed credentials JSON")
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing error: {e}")
-            print(f"JSON string (first 100 chars): {credentials_json[:100]}...")
-            raise
-            
-        # Initialize Earth Engine with credentials
-        credentials = ee.ServiceAccountCredentials(
-            service_account, 
-            key_data=json.dumps(credentials_dict)
-        )
-        ee.Initialize(credentials)
-        print("✅ Google Earth Engine initialized with service account!")
-        return True
-    except Exception as e:
-        print(f"❌ Failed to initialize Earth Engine: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+import os
 
-# Call the function to initialize EE
+from google.oauth2 import service_account
+
+# Function to initialize Earth Engine with credentials
+def initialize_ee():
+    # Get credentials from Streamlit secrets
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/earthengine"]
+    )
+    # Initialize Earth Engine
+    ee.Initialize(credentials)
+
+# Replace ee.Authenticate() with this
 initialize_ee()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
