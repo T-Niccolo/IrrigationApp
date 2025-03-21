@@ -11,6 +11,7 @@ from datetime import datetime
 from shapely.geometry import Point
 
 
+#Irr app
 
 def initialize_ee():
     try:
