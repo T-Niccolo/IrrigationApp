@@ -30,6 +30,7 @@ def initialize_ee():
 # Replace ee.Authenticate() with this
 initialize_ee()
 
+
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
     poi = ee.Geometry.Point([lon, lat])
@@ -40,7 +41,7 @@ def get_ndvi(lat, lon):
     ndvi = img.normalizedDifference(['B8', 'B4']).reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=poi,
-        scale=30
+        scale=50
     ).get('nd')
 
     try:
@@ -49,7 +50,7 @@ def get_ndvi(lat, lon):
         return None
 
 
-# 🌧️ Function to Fetch Weather Data (ET0 & Rain)
+# 🌧 Function to Fetch Weather Data (ET0 & Rain)
 def get_rain(lat, lon):
     # Calculate last November's date dynamically
     today = datetime.now()
@@ -130,7 +131,7 @@ def display_map():
     m = folium.Map(location=map_center, zoom_start=14, tiles=map_types[selected_map])
 
     # Display the map in Streamlit
-    return st_folium(m, height=500, width=700)
+    return st_folium(m)  # , height=700, width=700)
 
 
 # 📊 Function to Calculate Irrigation
@@ -150,11 +151,10 @@ def calc_irrigation():
     df.loc[df['NDVI'] * 1.05 < 0.7, 'ET1'] = df['ET0'] * df['NDVI'] * 1.05 / 0.7
 
     # Adjust rainfall
-    df['rain1'] = df['rain'] * m_rain / df['rain'].sum()
+    df['rain1'] = df['rain']  # * m_rain / df['rain'].sum()
     df.loc[df['month'] == 2, 'rain1'] += m_winter  # Winter irrigation
 
     # # Soil water balance
-    df['SW0'] = df['rain1'].sum() - df['ET1'].cumsum()
     SWI = (df['rain1'].sum() - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2) / len(mnts)
 
     df.loc[df['month'].isin(mnts), 'irrigation'] = df['ET1'] - SWI
@@ -165,21 +165,25 @@ def calc_irrigation():
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
-    df['irrigation'] *= m_irrigation / df['irrigation'].sum()
-    df['SW1'] = df['SW0'] + df['irrigation'].cumsum()
+    # df['irrigation'] *= m_irrigation / df['irrigation'].sum()
+    df['SW1'] = df['rain1'].sum() - df['ET1'].cumsum() + df['irrigation'].cumsum()
     df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
 
     return df  # [['time', 'ET0', 'ET1', 'rain', 'rain1', 'irrigation', 'SW0', 'SW1', 'alert']]
 
 
-# 🌟 **Streamlit UI**
+# 🌟 *Streamlit UI*
 # st.title("California Almond Calculator")
 
-# 📌 **User Inputs**
+# 📌 *User Inputs*
 st.sidebar.subheader("Farm Data")
 # m_rain = st.sidebar.slider("Fix Rain to Field", 0, 40, 10, step=1)
 m_winter = st.sidebar.slider("Winter Irrigation", 0, 40, 0, step=1)
 irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
+
+# total_irrigation = (1450*ndvi/.7-rain['rain'].sum()+40)*.04
+# m_irrigation = st.sidebar.slider("Water Allocation", 0, 70, int(total_irrigation), step=5)
+
 
 # if "m_rain" not in st.session_state:
 #     st.session_state["m_rain"] = 0
@@ -189,40 +193,57 @@ irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now(
 #     "Fix Rain", 0, 40, st.session_state["m_rain"], step=1
 # )
 
-# 🗺️ **Map Selection**
-map_data = display_map()
-if map_data and 'last_clicked' in map_data:
-    coords = map_data['last_clicked']
-    lat, lon = coords['lat'], coords['lng']
+# Layout: 2 columns (map | output)
+col1, col2 = st.columns([3, 5])
 
-    st.write(f"📍 Selected Location: **{lat:.6f}, {lon:.6f}**")
+with col1:
+    # 🗺 *Map Selection*
+    map_data = display_map()
 
-    # 📊 Fetch and Process Data
-    rain = get_rain(lat, lon)
-    ndvi = get_ndvi(lat, lon)
-    et0 = get_ET0(lat, lon)
+with col2:
+    if map_data and isinstance(map_data, dict) and 'last_clicked' in map_data and isinstance(map_data['last_clicked'],
+                                                                                             dict):
 
-    total_rain = rain['rain'].sum() * 0.04
-    m_rain = st.sidebar.slider("Fix Rain to Field", 0, 40, int(total_rain), step=1)
+        coords = map_data['last_clicked']
+        lat, lon = coords['lat'], coords['lng']
 
-    total_irrigation = (1450 * ndvi / .7 - rain['rain'].sum() + 40) * .04
-    m_irrigation = st.sidebar.slider("Water Allocation", 0, 70, int(total_irrigation), step=5)
+        # st.write(f"📍 Selected Location: *{lat:.2f}, {lon:.2f}*")
 
-    if not et0.empty:
-        # st.write("✅ **Weather Data Loaded**")
-        df_irrigation = calc_irrigation()
+        # 📊 Fetch and Process Data
+        rain = get_rain(lat, lon)
+        ndvi = get_ndvi(lat, lon)
+        et0 = get_ET0(lat, lon)
 
-        # 📊 Display Table
-        st.subheader("Irrigation Table")
-        st.dataframe(df_irrigation)
+        total_rain = rain['rain'].sum() * 0.04
+        m_rain = st.sidebar.slider("Fix Rain to Field", 0, 40, int(total_rain), step=1, disabled=True)
 
-        # # 📈 Plot Data
-        # st.subheader("Irrigation & Soil Water Balance")
-        # fig, ax = plt.subplots()
-        # ax.bar(df_irrigation['time'].dt.month, df_irrigation['irrigation'], color='blue', alpha=0.5, label="Irrigation")
-        # ax.set_xlabel("Month")
-        # ax.set_ylabel("Irrigation (inches)")
-        # ax.legend()
-        # st.pyplot(fig)
-    else:
-        st.error("❌ No weather data found for this location.")
+        if lat is not None and lon is not None:
+
+            df_irrigation = calc_irrigation()
+            # st.write("NDVI is: ", ndvi, " ; ET0 is", df_irrigation["ET0"].sum().round(0), " ; Irrigation is", df_irrigation["irrigation"].sum().round(0))
+
+            total_irrigation = df_irrigation['irrigation'].sum()
+            m_irrigation = st.sidebar.slider("Water Allocation", 0, 70, int(total_irrigation), step=5, disabled=True)
+
+            # 📈 Plot Data
+            # st.subheader("Irrigation & Soil Water Balance")
+            fig, ax = plt.subplots()
+            ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='blue', alpha=0.5, label="Irrigation")
+            ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='red',
+                    label="Soil Water Balance (SW)")
+
+            ax.set_title(
+                f"NDVI is: {ndvi:.2f} ; ET0 is {df_irrigation['ET0'].sum():.0f} ; Irrigation is {df_irrigation['irrigation'].sum():.0f}")
+            ax.set_xlabel("Month")
+            ax.set_ylabel("Irrigation (inches)")
+            ax.legend()
+            st.pyplot(fig)
+
+            df_irrigation['week_irrigation'] = df_irrigation['irrigation'] / 4
+
+            # 📊 Display Table
+            # st.subheader("Irrigation Table")
+            st.dataframe(df_irrigation[['month', 'ET0', 'week_irrigation']].round(1))
+
+        else:
+            st.error("❌ No weather data found for this location.")
