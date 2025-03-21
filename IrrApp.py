@@ -246,4 +246,4 @@ with col2:
             st.dataframe(df_irrigation[['month', 'ET0', 'week_irrigation']].round(1))
 
         else:
-            st.error("❌ No weather data found for this location.")
+            st.error("❌ No weather data found at this location.")
