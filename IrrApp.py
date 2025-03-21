@@ -17,29 +17,31 @@ def initialize_ee():
     try:
         import streamlit as st
         import json
-
-        # Print available secrets for debugging (remove in production)
+        import re
+        
+        # Print available secrets for debugging
         print("Available secrets:", list(st.secrets.keys()))
-
+        
         # Get service account email
         service_account = st.secrets["EE_SERVICE_ACCOUNT"]
-
-        # Get credentials - two possible formats in secrets
-        if "EE_CREDENTIALS" in st.secrets:
-            # If stored as a complete dictionary
-            credentials_dict = st.secrets["EE_CREDENTIALS"]
-            print("Found EE_CREDENTIALS as dictionary")
-        elif "EE_CREDENTIALS_JSON" in st.secrets:
-            # If stored as a JSON string
+        
+        # Get credentials from JSON string
+        try:
             credentials_json = st.secrets["EE_CREDENTIALS_JSON"]
+            # Clean the JSON string - replace literal \n with actual newlines
+            # and remove any problematic control characters
+            credentials_json = credentials_json.replace('\\n', '\n')
+            credentials_json = re.sub(r'[\x00-\x1F\x7F]', '', credentials_json)
             credentials_dict = json.loads(credentials_json)
-            print("Found EE_CREDENTIALS_JSON as string")
-        else:
-            raise ValueError("No Earth Engine credentials found in secrets")
-
+            print("Successfully parsed credentials JSON")
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}")
+            print(f"JSON string (first 100 chars): {credentials_json[:100]}...")
+            raise
+            
         # Initialize Earth Engine with credentials
         credentials = ee.ServiceAccountCredentials(
-            service_account,
+            service_account, 
             key_data=json.dumps(credentials_dict)
         )
         ee.Initialize(credentials)
@@ -47,7 +49,6 @@ def initialize_ee():
         return True
     except Exception as e:
         print(f"❌ Failed to initialize Earth Engine: {e}")
-        # Print more detailed error information
         import traceback
         traceback.print_exc()
         return False
