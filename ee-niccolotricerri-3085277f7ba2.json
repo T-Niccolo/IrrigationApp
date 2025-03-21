@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ee-niccolotricerri",
+  "private_key_id": "3085277f7ba2aee734ae75919fde0365edceb150",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCckxt/iVL7nDw0\nDzqzvUMvQEZBQW++ENBjiBECsvSEOCsaMnAcfsWCho1i8OYGmdP1bFjPWVMR/R/Q\nhtsHVj+3jUupMVIHHSIIoIULn79+PckOYpzzkw/F1zQksMD4Kp4na2wzfHMlrcRR\nOlrOXuw8NHlw80iKpay3v8u2lMpaNjXLSRql2RkhZUjBwEi+DPWu+K4QCKX90gNd\nNNOP6rNYgHJ4ixo4aEA2nR/L3nen5LOrSw0Md1tuZ1/F6/zyOA37bgf4x5moipC5\n57m/9qGrWakmJDgqZZHKv6R4kQYVItS8In6nw7sLy8buboBjQ6BAetdW3qCpMzUk\n+gBvMFozAgMBAAECggEAAydTXnY9naO/8qx72jLtr33z7EyNG57rE5YiAZPpKOCY\nvaZWa7yB7ecX4e5IM8nVYxQTldmOusYGZgTRVIyALApEg9vicxI7JUFWbK2DBd/o\ntMl3r9A+eRWkjzigKl9xYAnh3Aedqhyd36T1P0LaLzw/Ve8QfvpnSCwsxjio+rgk\nu/OmPUkVLPAItHxuB14RsoOqpbqfIyZjijRkOdeeBe0YcfXgOprIW3CmUXdxT43k\na6cNJzUQtm71uu6tvqfFkliaPl4D3RHxsLG4op9BOo/8cPyZefkk6WmYgpO/Fzaj\n7GQmfAncZCStLDvON1EB22Xyma+OgDqq+h25Zv0QAQKBgQDNQEboRFssV8FSvghu\nW1SGshpTlGXqljtkIt7f/k+tTfz5UiJ9gGTGU6Di3N4V45UMba8alaDTi9rytD58\nsQ/rDHzWHx3/ZeOrUMxMqQmWb3+4d1qdqyoFsXnPDdLH8AKLG1Gd2MTW8jSlahhJ\nxcVvf9X7S38wkASb52D3D4ErMwKBgQDDScVDRCUC5I6ybDmxT065WOtQ5zhJBlKc\nAn6YXzYzgu1KyaSyWMl+4so/oE74dVaj1oksNT5/cucob3cRD/1s/s+5CChk6RbY\nfJ1+3YqNNWjfbWwI7m72qE0355chpMpYji72fj/4qB9otcunRTUKqWi9FdCpi8R5\nSFKJPEwVAQKBgDb97MGYZvEnhfV8Utf2glwgZetUzEWhAMKgkSRkh8aAKbJHLlR/\nzQBSMb32vU4SDsIotQyjYFatlvkGD+PqsMAiNWRNLAVcsDYbTNGRTK9QqmCrIc0y\nqeyik2dFZd8J0DSjGif3hy2r8S0MkvtZEMAB+Tv+C1Lgk0uOH62yKsJ/AoGAQP7o\nfH7NoqzXIWMLwIuYs+94QjDydrt3+xyJbcUikPpeZ6m8+u66AVUR4yNDpUXIVDcu\n6FvANULU1IxkoHUl74TPNdIVP6CkTeELuhGZ7217PgF5F2/j1owlRxn5HuVtwxNv\nZfKW7/dknMEEyuMpyCaiCWydShCOj58WeT5sRAECgYEAzDySSUSdD264KOVBBAYd\nhsjtBltxJbE9ukAdbKkCy9AQuofWSzCOXvdHDAtw3jBwUuqw2bhFOEuTV6ucKFB4\njiCxvl3dSOyjH8aVB1Bf7KXzzYs62nItA68MHTMAyg5I3nNTY/ZINZG4PCRRvNJ6\ne0Sb7wvv0HqNJPokypIFUjs=\n-----END PRIVATE KEY-----\n",
+  "client_email": "appirrservice@ee-niccolotricerri.iam.gserviceaccount.com",
+  "client_id": "109729744093703994605",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/appirrservice%40ee-niccolotricerri.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
