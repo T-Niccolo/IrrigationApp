@@ -15,29 +15,41 @@ from shapely.geometry import Point
 
 def initialize_ee():
     try:
-        import os
+        import streamlit as st
         import json
-        from google.oauth2 import service_account
 
-        # Get credentials from environment variables
-        service_account_email = os.environ.get('EE_SERVICE_ACCOUNT')
-        service_account_json = os.environ.get('EE_CREDENTIALS')
+        # Print available secrets for debugging (remove in production)
+        print("Available secrets:", list(st.secrets.keys()))
 
-        # Parse the JSON string into a dictionary
-        service_account_dict = json.loads(service_account_json)
+        # Get service account email
+        service_account = st.secrets["EE_SERVICE_ACCOUNT"]
 
-        # Create credentials object
-        credentials = service_account.Credentials.from_service_account_info(
-            service_account_dict,
-            scopes=['https://www.googleapis.com/auth/earthengine']
+        # Get credentials - two possible formats in secrets
+        if "EE_CREDENTIALS" in st.secrets:
+            # If stored as a complete dictionary
+            credentials_dict = st.secrets["EE_CREDENTIALS"]
+            print("Found EE_CREDENTIALS as dictionary")
+        elif "EE_CREDENTIALS_JSON" in st.secrets:
+            # If stored as a JSON string
+            credentials_json = st.secrets["EE_CREDENTIALS_JSON"]
+            credentials_dict = json.loads(credentials_json)
+            print("Found EE_CREDENTIALS_JSON as string")
+        else:
+            raise ValueError("No Earth Engine credentials found in secrets")
+
+        # Initialize Earth Engine with credentials
+        credentials = ee.ServiceAccountCredentials(
+            service_account,
+            key_data=json.dumps(credentials_dict)
         )
-
-        # Initialize Earth Engine
         ee.Initialize(credentials)
         print("✅ Google Earth Engine initialized with service account!")
         return True
     except Exception as e:
         print(f"❌ Failed to initialize Earth Engine: {e}")
+        # Print more detailed error information
+        import traceback
+        traceback.print_exc()
         return False
 
 # Call the function to initialize EE
