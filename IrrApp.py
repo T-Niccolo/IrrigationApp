@@ -15,7 +15,7 @@ from shapely.geometry import Point
 
 import os
 
-# GEE service autentication DO NOT TOUCH ################################
+# GEE service autentication DO NOT TOUCH ###############################
 
 from google.oauth2 import service_account
 
@@ -31,7 +31,7 @@ def initialize_ee():
 
 initialize_ee()
 
-#########################################################################
+########################################################################
 
 
 
