@@ -197,12 +197,36 @@ irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now(
 #     "Fix Rain", 0, 40, st.session_state["m_rain"], step=1
 # )
 
-# Layout: 2 columns (map | output)
-col1, col2 = st.columns([3, 5])
+# Layout: Adjust column proportions to control map width percentage
+# You can adjust these numbers to change the percentage
+map_percentage = 40  # Map will take approximately 40% of screen width
+output_percentage = 60  # Output section takes 60%
+
+# Create columns with specified width percentages
+col1, col2 = st.columns([map_percentage, output_percentage])
 
 with col1:
     # 🗺 *Map Selection*
-    map_data = display_map()
+    st.subheader("Select Farm Location")
+
+    # Set map height based on viewport
+    map_height = 600  # Default height in pixels
+
+    # You can add a height control in sidebar if desired
+    map_height = st.sidebar.slider("Map Height", 300, 800, 600, step=50)
+
+    # Display map with controlled height
+    map_data = st_folium(
+        folium.Map(
+            location=[35.261723, -119.177502],  # Default center
+            zoom_start=14,
+            tiles="OpenStreetMap" if st.sidebar.checkbox("Use Street Map", False) else "Esri.WorldImagery"
+        ),
+        height=map_height,
+        width="100%"  # This ensures the map uses 100% of col1's width
+    )
+
+
 
 with col2:
     if map_data and isinstance(map_data, dict) and 'last_clicked' in map_data and isinstance(map_data['last_clicked'],
