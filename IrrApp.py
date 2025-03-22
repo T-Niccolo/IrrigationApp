@@ -15,6 +15,8 @@ from shapely.geometry import Point
 
 import os
 
+# GEE service autentication DO NOT TOUCH ################################
+
 from google.oauth2 import service_account
 
 # Function to initialize Earth Engine with credentials
@@ -27,8 +29,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-# Replace ee.Authenticate() with this
 initialize_ee()
+
+#########################################################################
+
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
