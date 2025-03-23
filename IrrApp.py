@@ -4,7 +4,15 @@ import os
 
 # GEE service autentication DO NOT TOUCH ###############################
 
-
+import streamlit as st
+from datetime import datetime
+import pandas as pd
+import numpy as np
+import requests
+import folium
+from streamlit_folium import st_folium
+import matplotlib.pyplot as plt
+import ee
 from google.oauth2 import service_account
 
 
@@ -22,15 +30,7 @@ def initialize_ee():
 initialize_ee()
 
 ########################################################################
-import streamlit as st
-from datetime import datetime
-import pandas as pd
-import numpy as np
-import requests
-import folium
-from streamlit_folium import st_folium
-import matplotlib.pyplot as plt
-import ee
+
 
 # 🔐 Authenticate Earth Engine
 #ee.Authenticate()
