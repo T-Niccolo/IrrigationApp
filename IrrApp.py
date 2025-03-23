@@ -4,6 +4,7 @@ import os
 
 # GEE service autentication DO NOT TOUCH ###############################
 
+
 from google.oauth2 import service_account
 
 
