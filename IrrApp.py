@@ -92,6 +92,8 @@ def get_rain(lat, lon):
     df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
     df_monthly['month'] = df_monthly['time'].dt.month
 
+    st.write(df_monthly)
+
     return df_monthly
 
 #ET0 Fetch Function
@@ -252,8 +254,7 @@ with col2:
         df_irrigation = st.session_state['irrigation_df']
 
 
-        st.write(ndvi)
-        st.write(rain)
+
 
 
 
