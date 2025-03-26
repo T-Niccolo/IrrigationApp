@@ -128,7 +128,7 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
 
-    adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= True)
+    adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= False)
 
 
 
@@ -182,7 +182,7 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
 
-    All_water = st.sidebar.slider("Water Allocation", 0, 70, int(df['irrigation'].sum()), step=5, disabled=True)
+    All_water = st.sidebar.slider("Water Allocation", 0, 70, int(df['irrigation'].sum()), step=5, disabled=False)
 
     if All_water != int(df['irrigation'].sum()):
         delta = All_water - df['irrigation'].sum()
@@ -250,6 +250,10 @@ with col2:
         rain = st.session_state['rain']
         ndvi = st.session_state['ndvi']
         df_irrigation = st.session_state['irrigation_df']
+
+
+        st.write(ndvi)
+        st.write(rain)
 
 
 
