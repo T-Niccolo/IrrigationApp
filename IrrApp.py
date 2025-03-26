@@ -1,6 +1,7 @@
 #Irr app
 
 import os
+from pickle import FALSE
 
 # GEE service autentication DO NOT TOUCH ###############################
 
@@ -27,14 +28,14 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
 ########################################################################
 
 
 # 🔐 Authenticate Earth Engine
-#ee.Authenticate()
-#ee.Initialize()
+ee.Authenticate()
+ee.Initialize()
 
 
 
@@ -50,15 +51,15 @@ if 'lat' not in st.session_state:
     st.session_state['et0'] = None
     st.session_state['irrigation_df'] = None
 
-# 🌍 NDVI Fetch Function
+#NDVI Fetch Function
 def get_ndvi(lat, lon):
-    poi = ee.Geometry.Point([lon, lat])
+    poi = ee.Geometry.Point([lon, lat]).buffer(50)
     img = ee.ImageCollection('COPERNICUS/S2_HARMONIZED') \
         .filterDate(f"{datetime.now().year - 1}-05-01", f"{datetime.now().year - 1}-06-01") \
         .median()
 
     ndvi = img.normalizedDifference(['B8', 'B4']).reduceRegion(
-        reducer=ee.Reducer.mean(),
+        reducer=ee.Reducer.median(),
         geometry=poi,
         scale=50
     ).get('nd')
@@ -70,7 +71,7 @@ def get_ndvi(lat, lon):
 
 
 
-# 🌧 Rain Fetch Function
+# Rain Fetch Function
 def get_rain(lat, lon):
     today = datetime.now()
     last_november = datetime(today.year - 1 if today.month < 11 else today.year, 11, 1).date()
@@ -93,7 +94,7 @@ def get_rain(lat, lon):
 
     return df_monthly
 
-# ☀️ ET0 Fetch Function
+#ET0 Fetch Function
 def get_ET0(lat, lon):
     today = datetime.now().date()
     start_date = datetime(today.year - 5, today.month, 1).date()
@@ -119,13 +120,15 @@ def get_ET0(lat, lon):
 
     return df_avg
 
-# 📊 Irrigation Calculation
+#Irrigation Calculation
 def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
     if et0 is None or rain is None or ndvi is None or irrigation_months is None or w_winter is None:
-        # Return None or an empty DataFrame or some indicator value
         return None  # or pd.DataFrame() or "Missing data"
 
+
+
+    adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= True)
 
 
 
@@ -133,9 +136,13 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
     df['NDVI'] = ndvi
     df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
 
+
+
+
     mnts = list(range(irrigation_months[0], irrigation_months[1] + 1))
 
     df.loc[~df['month'].isin(range(3, 11)), 'ET0'] = 0
+
     df['rain'] *= 0.03937
     df['ET0'] *= 0.03937 * 0.9
 
@@ -143,45 +150,71 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
     df.loc[df['NDVI'] * 1.05 < 0.7, 'ET1'] = df['ET0'] * df['NDVI'] * 1.05 / 0.7
 
     df['rain1'] = df['rain']
-    df.loc[df['month'] == 2, 'rain1'] += w_winter
 
-    SWI = (df['rain1'].sum() - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2) / len(mnts)
+
+
+
+    df.loc[df['month'] == 2, 'rain1'] += w_winter
+    rain_sum = df['rain1'].sum()
+
+    if adj_wat != int(rain['rain'].sum() * 0.03937):
+        rain_sum = adj_wat
+
+
+
+
+
+    SWI = ((rain_sum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
+
 
     df.loc[df['month'].isin(mnts), 'irrigation'] = df['ET1'] - SWI
     df['irrigation'] = df['irrigation'].clip(lower=0).fillna(0)
 
+
+    #note to revisit this
     vst = df.loc[df['month'] == 7, 'irrigation'] * 0.1
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
-    df['SW1'] = df['rain1'].sum() - df['ET1'].cumsum() + df['irrigation'].cumsum()
+
+    df['SW1'] = rain_sum - df['ET1'].cumsum() + df['irrigation'].cumsum()
     df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
+
+
+
+    All_water = st.sidebar.slider("Water Allocation", 0, 70, int(df['irrigation'].sum()), step=5, disabled=True)
+
+    if All_water != int(df['irrigation'].sum()):
+        delta = All_water - df['irrigation'].sum()
+        print(delta)
+
+
 
     return df
 
-# 🌟 Streamlit UI
+#Streamlit UI
 # st.title("California Almond Calculator")
 
 st.sidebar.subheader("Farm Data")
 w_winter = st.sidebar.slider("Winter Irrigation", 0, 40, 0, step=1)
 irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
 
-# 🧪 Units Toggle
+#Units Toggle
 units = st.sidebar.radio("Units (only results)", ["inches", "mm"])
 conversion_factor = 1 if units == "inches" else 25.4
 
-# 📍 Location Selection
 col1, col2 = st.columns([6, 4])
 
 with col1:
     st.subheader("Select your farm Location")
 
-    map_data = st_folium(
-        folium.Map(
-            location=[35.261723, -119.177502],
-            zoom_start=14,
-            tiles="OpenStreetMap" if st.sidebar.checkbox("Use Street Map", False) else "Esri.WorldImagery"
-        ),
+    BaseMap = folium.Map(
+        location=[35.261723, -119.177502],
+        zoom_start=14,
+        tiles= "Esri.WorldImagery"
+    )
+
+    map_data = st_folium(BaseMap,
         width="100%",
         height=700
     )
@@ -201,6 +234,7 @@ with col2:
             st.session_state['rain'] = get_rain(lat, lon)
             st.session_state['ndvi'] = get_ndvi(lat, lon)
             st.session_state['et0'] = get_ET0(lat, lon)
+            folium.Marker([lon, lat], popup='posit').add_to(BaseMap)
 
     # Move this outside the conditional so it runs on ANY input change
     if 'rain' in st.session_state and 'ndvi' in st.session_state and 'et0' in st.session_state:
@@ -217,16 +251,13 @@ with col2:
         ndvi = st.session_state['ndvi']
         df_irrigation = st.session_state['irrigation_df']
 
-        total_rain = rain['rain'].sum() * 0.04
-        m_rain = st.sidebar.slider("Fix Rain to Field", 0, 40, int(total_rain), step=1, disabled=True)
 
-        total_irrigation = df_irrigation['irrigation'].sum()
-        m_irrigation = st.sidebar.slider("Water Allocation", 0, 70, int(total_irrigation), step=5, disabled=True)
 
-        # 📈 Plotting
+
+        # Plotting
         fig, ax = plt.subplots()
-        ax.bar(df_irrigation['month'], df_irrigation['irrigation'] * conversion_factor, color='blue', alpha=0.5, label="Irrigation")
-        ax.plot(df_irrigation['month'], df_irrigation['SW1'] * conversion_factor, marker='o', linestyle='-', color='red', label="Soil Water Balance (SW)")
+        ax.bar(df_irrigation['month'], df_irrigation['irrigation'] * conversion_factor, color='blue', alpha=0.3, label="Irrigation")
+        ax.plot(df_irrigation['month'], df_irrigation['SW1'] * conversion_factor, marker='o', linestyle='-', color='green', label="Soil Water Balance (SW)")
 
         ax.set_title(f"NDVI: {ndvi:.2f} ; ET0: {df_irrigation['ET0'].sum():.0f} ; Irrigation: {df_irrigation['irrigation'].sum():.0f}")
         ax.set_xlabel("Month")
@@ -237,6 +268,6 @@ with col2:
         df_irrigation['week_irrigation'] = df_irrigation['irrigation'] / 4 * conversion_factor
         st.dataframe(df_irrigation[['month', 'ET0', 'week_irrigation']].round(1))
     else:
-        st.error("❌ No weather data found at this location.")
+        st.error("❌ Not enough data found at this location.")
 
 
