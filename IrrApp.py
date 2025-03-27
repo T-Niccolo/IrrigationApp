@@ -160,7 +160,7 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
     df = et0.copy()
-    print(df)
+    #print(df)
     df['NDVI'] = ndvi
     #df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
 
