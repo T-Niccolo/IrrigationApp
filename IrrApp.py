@@ -73,33 +73,57 @@ def get_ndvi(lat, lon):
 
 # Rain Fetch Function
 def get_rain(lat, lon):
+    poi = ee.Geometry.Point([lon, lat]).buffer(1000)
+
     today = datetime.now()
     last_november = datetime(today.year - 1 if today.month < 11 else today.year, 11, 1).date()
 
-    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={last_november}&end_date={today.date()}&daily=rain_sum&timezone=auto"
+    img = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \
+    .filterDate(last_november.strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d')) \
+        .sum()
 
-    response = requests.get(url)
-    data = response.json()
+    rain = img.reduceRegion(
+        reducer=ee.Reducer.mean(),
+        geometry=poi,
+        scale=5566
+    ).get('precipitation').getInfo()
 
-    if 'daily' not in data:
-        return pd.DataFrame()
 
-    df = pd.DataFrame(data['daily'])
-    df['time'] = pd.to_datetime(df['time'])
-    df.rename(columns={'rain_sum': 'rain'}, inplace=True)
 
-    df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'rain': 'sum'}).reset_index()
-    df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
-    df_monthly['month'] = df_monthly['time'].dt.month
+    #url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={last_november}&end_date={today.date()}&daily=rain_sum&timezone=auto"
 
-    st.write(df_monthly)
+    #response = requests.get(url)
+    #data = response.json()
 
-    return df_monthly
+    #if 'daily' not in data:
+    #    return pd.DataFrame()
+
+    #df = pd.DataFrame(data['daily'])
+    #df['time'] = pd.to_datetime(df['time'])
+    #df.rename(columns={'rain_sum': 'rain'}, inplace=True)
+
+    #df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'rain': 'sum'}).reset_index()
+    #df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
+    #df_monthly['month'] = df_monthly['time'].dt.month
+
+
+    #return df_monthly
+    return rain
+
 
 #ET0 Fetch Function
 def get_ET0(lat, lon):
     today = datetime.now().date()
     start_date = datetime(today.year - 5, today.month, 1).date()
+
+
+
+
+
+
+
+
+
 
     url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={today}&daily=et0_fao_evapotranspiration&timezone=auto"
 
@@ -130,13 +154,15 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
 
-    adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= False)
+    #adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= False)
+    adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain * 0.03937), step=1, disabled= False)
 
 
 
     df = et0.copy()
+    print(df)
     df['NDVI'] = ndvi
-    df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
+    #df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
 
 
 
@@ -145,41 +171,42 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
     df.loc[~df['month'].isin(range(3, 11)), 'ET0'] = 0
 
-    df['rain'] *= 0.03937
+    #df['rain'] *= 0.03937
     df['ET0'] *= 0.03937 * 0.9
 
     df['ET1'] = df['ET0'] * df['NDVI'] / 0.7
     df.loc[df['NDVI'] * 1.05 < 0.7, 'ET1'] = df['ET0'] * df['NDVI'] * 1.05 / 0.7
 
-    df['rain1'] = df['rain']
+    #df['rain1'] = df['rain']
 
 
 
 
-    df.loc[df['month'] == 2, 'rain1'] += w_winter
-    rain_sum = df['rain1'].sum()
+    #df.loc[df['month'] == 2, 'rain1'] += w_winter
+    #rain_sum = df['rain1'].sum()
 
-    if adj_wat != int(rain['rain'].sum() * 0.03937):
-        rain_sum = adj_wat
-
+    rainSum = (rain * 0.03937) + w_winter
 
 
+    if adj_wat != rain * 0.03937:
+        #rain_sum = adj_wat
+        rainSum = adj_wat + w_winter
 
-
-    SWI = ((rain_sum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
+    #SWI = ((rain_sum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
+    SWI = ((rainSum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
 
 
     df.loc[df['month'].isin(mnts), 'irrigation'] = df['ET1'] - SWI
     df['irrigation'] = df['irrigation'].clip(lower=0).fillna(0)
 
 
-    #note to revisit this
     vst = df.loc[df['month'] == 7, 'irrigation'] * 0.1
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
 
-    df['SW1'] = rain_sum - df['ET1'].cumsum() + df['irrigation'].cumsum()
+    #df['SW1'] = rain_sum - df['ET1'].cumsum() + df['irrigation'].cumsum()
+    df['SW1'] = rainSum - df['ET1'].cumsum() + df['irrigation'].cumsum()
     df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
 
 
