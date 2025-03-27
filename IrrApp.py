@@ -73,47 +73,28 @@ def get_ndvi(lat, lon):
 
 # Rain Fetch Function
 def get_rain(lat, lon):
-    poi = ee.Geometry.Point([lon, lat]).buffer(1000)
+    poi = ee.Geometry.Point([lon, lat])
 
     today = datetime.now()
     last_november = datetime(today.year - 1 if today.month < 11 else today.year, 11, 1).date()
 
-    img = ee.ImageCollection('UCSB-CHG/CHIRPS/DAILY') \
+    img = ee.ImageCollection('IDAHO_EPSCOR/GRIDMET') \
+    .select('pr') \
     .filterDate(last_november.strftime('%Y-%m-%d'), datetime.now().strftime('%Y-%m-%d')) \
         .sum()
+
 
     rain = img.reduceRegion(
         reducer=ee.Reducer.mean(),
         geometry=poi,
-        scale=5566
-    ).get('precipitation').getInfo()
+        scale=11132,
+    ).get('pr').getInfo()
 
-
-
-    #url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={last_november}&end_date={today.date()}&daily=rain_sum&timezone=auto"
-
-    #response = requests.get(url)
-    #data = response.json()
-
-    #if 'daily' not in data:
-    #    return pd.DataFrame()
-
-    #df = pd.DataFrame(data['daily'])
-    #df['time'] = pd.to_datetime(df['time'])
-    #df.rename(columns={'rain_sum': 'rain'}, inplace=True)
-
-    #df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'rain': 'sum'}).reset_index()
-    #df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
-    #df_monthly['month'] = df_monthly['time'].dt.month
-
-
-    #return df_monthly
     return rain
 
 
 #ET0 Fetch Function
 def get_ET0(lat, lon):
-    ee.Initialize()
     poi = ee.Geometry.Point([lon, lat]).buffer(100)
 
     today = datetime.now()
@@ -137,7 +118,7 @@ def get_ET0(lat, lon):
             month_end = min(month_end, end_date)
 
             # Fix: Call sum() correctly
-            img = ee.ImageCollection('MODIS/061/MOD16A2') \
+            img = ee.ImageCollection('IDAHO_EPSCOR/GRIDMET') \
                 .filterDate(month_start.strftime('%Y-%m-%d'), month_end.strftime('%Y-%m-%d')) \
                 .sum()
 
@@ -151,8 +132,8 @@ def get_ET0(lat, lon):
                 scale=30
             ).getInfo()
 
-            if et_result and 'ET' in et_result:
-                et_value = et_result['ET']
+            if et_result and 'eto' in et_result:
+                et_value = et_result['eto']
             else:
                 et_value = None  # Handle missing data
 
@@ -174,35 +155,11 @@ def get_ET0(lat, lon):
     df5.rename(columns={'ET': 'ET0'}, inplace=True)
 
 
-
-
-
-    #today = datetime.now().date()
-    #start_date = datetime(today.year - 5, today.month, 1).date()
-
-    #url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={today}&daily=et0_fao_evapotranspiration&timezone=auto"
-
-    #response = requests.get(url)
-    #data = response.json()
-
-    #if 'daily' not in data:
-    #    return pd.DataFrame()
-
-    #df = pd.DataFrame(data['daily'])
-    #df['time'] = pd.to_datetime(df['time'])
-    #df.rename(columns={'et0_fao_evapotranspiration': 'ET0'}, inplace=True)
-
-    #df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'ET0': 'sum'}).reset_index()
-    #df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
-    #df_monthly['month'] = df_monthly['time'].dt.month
-    #df_monthly['year'] = df_monthly['time'].dt.year
-
-    #df_avg = df_monthly.groupby('month').agg({'ET0': 'mean'}).reset_index()
-
-
-
-    #return df_avg
     return df5
+
+
+
+
 
 #Irrigation Calculation
 def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
@@ -212,14 +169,12 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
 
-    #adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain['rain'].sum() * 0.03937), step=1, disabled= False)
     adj_wat = st.sidebar.slider("Fix Rain to Field", 0, 40, int(rain * 0.03937), step=1, disabled= False)
 
 
 
     df = et0.copy()
     df['NDVI'] = ndvi
-    #df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
 
 
 
@@ -228,20 +183,10 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
     df.loc[~df['month'].isin(range(3, 11)), 'ET0'] = 0
 
-    #df['rain'] *= 0.03937
-    df['ET0'] *= 0.03937 * 0.9
+    df['ET0'] *= 0.03937
 
     df['ET1'] = df['ET0'] * df['NDVI'] / 0.7
     df.loc[df['NDVI'] * 1.05 < 0.7, 'ET1'] = df['ET0'] * df['NDVI'] * 1.05 / 0.7
-
-    #df['rain1'] = df['rain']
-
-
-
-
-
-    #df.loc[df['month'] == 2, 'rain1'] += w_winter
-    #rain_sum = df['rain1'].sum()
 
     rainSum = (rain * 0.03937) + w_winter
 
@@ -250,7 +195,6 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
         #rain_sum = adj_wat
         rainSum = adj_wat + w_winter
 
-    #SWI = ((rain_sum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
     SWI = ((rainSum - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 2)) / len(mnts)
 
 
@@ -263,13 +207,12 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
 
-    #df['SW1'] = rain_sum - df['ET1'].cumsum() + df['irrigation'].cumsum()
     df['SW1'] = rainSum - df['ET1'].cumsum() + df['irrigation'].cumsum()
     df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
 
 
 
-    All_water = st.sidebar.slider("Water Allocation", 0, 70, int(df['irrigation'].sum()), step=5, disabled=False)
+    All_water = st.sidebar.slider("Water Allocation", 0, 100, int(df['irrigation'].sum()), step=5, disabled=False)
 
     if All_water != int(df['irrigation'].sum()):
         delta = All_water - df['irrigation'].sum()
@@ -321,7 +264,6 @@ with col2:
             st.session_state['rain'] = get_rain(lat, lon)
             st.session_state['ndvi'] = get_ndvi(lat, lon)
             st.session_state['et0'] = get_ET0(lat, lon)
-            folium.Marker([lon, lat], popup='posit').add_to(BaseMap)
 
     # Move this outside the conditional so it runs on ANY input change
     if 'rain' in st.session_state and 'ndvi' in st.session_state and 'et0' in st.session_state:
@@ -349,7 +291,7 @@ with col2:
         ax.bar(df_irrigation['month'], df_irrigation['irrigation'] * conversion_factor, color='blue', alpha=0.3, label="Irrigation")
         ax.plot(df_irrigation['month'], df_irrigation['SW1'] * conversion_factor, marker='o', linestyle='-', color='green', label="Soil Water Balance (SW)")
 
-        ax.set_title(f"NDVI: {ndvi:.2f} ; ET0: {df_irrigation['ET0'].sum():.0f} ; Irrigation: {df_irrigation['irrigation'].sum():.0f}")
+        ax.set_title(f"NDVI: {ndvi:.2f} ;season ET0: {df_irrigation['ET0'].sum():.0f} ; Irrigation: {df_irrigation['irrigation'].sum():.0f}")
         ax.set_xlabel("Month")
         ax.set_ylabel(f"Irrigation ({units})")
         ax.legend()
