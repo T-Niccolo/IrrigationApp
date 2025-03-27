@@ -6,7 +6,7 @@ from pickle import FALSE
 # GEE service autentication DO NOT TOUCH ###############################
 
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import requests
@@ -28,14 +28,14 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
 ########################################################################
 
 
 # 🔐 Authenticate Earth Engine
-#ee.Authenticate()
-#ee.Initialize()
+ee.Authenticate()
+ee.Initialize(project='ee-niccolotricerri')
 
 
 
@@ -113,38 +113,96 @@ def get_rain(lat, lon):
 
 #ET0 Fetch Function
 def get_ET0(lat, lon):
-    today = datetime.now().date()
-    start_date = datetime(today.year - 5, today.month, 1).date()
+    ee.Initialize()
+    poi = ee.Geometry.Point([lon, lat]).buffer(100)
+
+    today = datetime.now()
+    end_date = datetime(today.year, 1, 1) - timedelta(days=1)
+    start_date5 = datetime(end_date.year - 4, 1, 1)
+
+    monthly_et_data = []
+
+    for year in range(start_date5.year, end_date.year + 1):
+        for month in range(1, 13):
+            month_start = datetime(year, month, 1)
+
+            if month_start > end_date:
+                break
+
+            if month == 12:
+                month_end = datetime(year + 1, 1, 1) - timedelta(days=1)
+            else:
+                month_end = datetime(year, month + 1, 1) - timedelta(days=1)
+
+            month_end = min(month_end, end_date)
+
+            # Fix: Call sum() correctly
+            img = ee.ImageCollection('MODIS/061/MOD16A2') \
+                .filterDate(month_start.strftime('%Y-%m-%d'), month_end.strftime('%Y-%m-%d')) \
+                .sum()
+
+            #print(f"Year: {year}, Month: {month}")
+            #print(f"Date range: {month_start.strftime('%Y-%m-%d')} to {month_end.strftime('%Y-%m-%d')}")
+
+            # Fix: Handle missing 'ET' key properly
+            et_result = img.reduceRegion(
+                reducer=ee.Reducer.mean(),
+                geometry=poi,
+                scale=30
+            ).getInfo()
+
+            if et_result and 'ET' in et_result:
+                et_value = et_result['ET']
+            else:
+                et_value = None  # Handle missing data
+
+
+            # Append to results only if data exists
+            monthly_et_data.append({
+                'Year': year,
+                'month': month,
+                'ET': et_value
+            })
+
+
+    # Convert to DataFrame
+    df5byYear = pd.DataFrame(monthly_et_data)
+
+    df5 = df5byYear.groupby('month', as_index=False)['ET'].mean()
+
+    # Rename column for clarity
+    df5.rename(columns={'ET': 'ET0'}, inplace=True)
 
 
 
 
 
+    #today = datetime.now().date()
+    #start_date = datetime(today.year - 5, today.month, 1).date()
+
+    #url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={today}&daily=et0_fao_evapotranspiration&timezone=auto"
+
+    #response = requests.get(url)
+    #data = response.json()
+
+    #if 'daily' not in data:
+    #    return pd.DataFrame()
+
+    #df = pd.DataFrame(data['daily'])
+    #df['time'] = pd.to_datetime(df['time'])
+    #df.rename(columns={'et0_fao_evapotranspiration': 'ET0'}, inplace=True)
+
+    #df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'ET0': 'sum'}).reset_index()
+    #df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
+    #df_monthly['month'] = df_monthly['time'].dt.month
+    #df_monthly['year'] = df_monthly['time'].dt.year
+
+    #df_avg = df_monthly.groupby('month').agg({'ET0': 'mean'}).reset_index()
 
 
 
-
-
-    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={today}&daily=et0_fao_evapotranspiration&timezone=auto"
-
-    response = requests.get(url)
-    data = response.json()
-
-    if 'daily' not in data:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(data['daily'])
-    df['time'] = pd.to_datetime(df['time'])
-    df.rename(columns={'et0_fao_evapotranspiration': 'ET0'}, inplace=True)
-
-    df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'ET0': 'sum'}).reset_index()
-    df_monthly['time'] = df_monthly['time'].dt.to_timestamp()
-    df_monthly['month'] = df_monthly['time'].dt.month
-    df_monthly['year'] = df_monthly['time'].dt.year
-
-    df_avg = df_monthly.groupby('month').agg({'ET0': 'mean'}).reset_index()
-
-    return df_avg
+    #return df_avg
+    return df5
 
 #Irrigation Calculation
 def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
@@ -160,7 +218,6 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
 
 
     df = et0.copy()
-    #print(df)
     df['NDVI'] = ndvi
     #df = pd.merge(df, rain[['month', 'rain']], on='month', how='outer')
 
@@ -178,6 +235,7 @@ def calc_irrigation(rain, ndvi, et0, irrigation_months, w_winter):
     df.loc[df['NDVI'] * 1.05 < 0.7, 'ET1'] = df['ET0'] * df['NDVI'] * 1.05 / 0.7
 
     #df['rain1'] = df['rain']
+
 
 
 
