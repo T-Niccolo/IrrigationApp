@@ -28,14 +28,14 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-#initialize_ee()
+initialize_ee()
 
 ########################################################################
 
 
 # 🔐 Authenticate Earth Engine
-ee.Authenticate()
-ee.Initialize(project='ee-niccolotricerri')
+#ee.Authenticate()
+#ee.Initialize(project='ee-niccolotricerri')
 
 
 
