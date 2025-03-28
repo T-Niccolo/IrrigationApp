@@ -9,13 +9,9 @@ import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
 from datetime import datetime
 from shapely.geometry import Point
-
-
-# Initialize Google Earth Engine
 from google.oauth2 import service_account
 
 st.set_page_config(layout='wide')
-
 
 # Function to initialize Earth Engine with credentials
 def initialize_ee():
@@ -27,7 +23,7 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-#initialize_ee()
+initialize_ee()
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
