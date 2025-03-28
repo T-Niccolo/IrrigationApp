@@ -272,12 +272,13 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months):
 # st.title("California Almond Calculator")
 # 📌 **User Inputs**
 # 🌍 Unit system selection
+st.sidebar.subheader("Farm Data")
+
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"])
 
 unit_label = "inches" if "Imperial" in unit_system else "mm"
 conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
-st.sidebar.subheader("Farm Data")
 # m_winter = st.sidebar.slider("Winter Irrigation", 0, 40, 0, step=1)
 # irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
 
@@ -290,7 +291,7 @@ with col1:
     map_data = display_map()
 
 with col2:
-    st.subheader("Farm informations")
+    st.subheader("Report")
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
