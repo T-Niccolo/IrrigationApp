@@ -6,7 +6,6 @@ import requests
 import ee
 import numpy as np
 import matplotlib.pyplot as plt
-
 from streamlit_folium import st_folium
 from datetime import datetime
 from shapely.geometry import Point
@@ -28,7 +27,7 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
