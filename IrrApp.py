@@ -286,13 +286,16 @@ st.sidebar.subheader("Farm Data")
 # irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
 
 # Layout: 2 columns (map | output)
-col1, col2 = st.columns([3, 5])
+col1, col2 = st.columns([4, 6])
 
 with col1:
+    st.subheader("Select your farm Location")
     # 🗺️ **Map Selection**
     map_data = display_map()
 
 with col2:
+    st.subheader("Farm informations")
+
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)))
