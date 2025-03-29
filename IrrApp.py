@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from streamlit_folium import st_folium
 from datetime import datetime
+import time
 from shapely.geometry import Point
 from google.oauth2 import service_account
 
@@ -306,6 +307,12 @@ with col2:
         if coords and "lat" in coords and "lng" in coords:
             lat, lon = coords["lat"], coords["lng"]
             location = (round(lat, 5), round(lon, 5))
+
+            now = time.time()
+            last_loc = st.session_state.get("last_location")
+            last_time = st.session_state.get("last_location_time", 0)
+
+            location_changed = (last_loc != location) and (now - last_time > 5)
 
             # Check if location changed
             location_changed = st.session_state.get("last_location") != location
