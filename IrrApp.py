@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_folium import st_folium
 import pandas as pd
 import folium
 import json
@@ -6,7 +7,6 @@ import requests
 import ee
 import numpy as np
 import matplotlib.pyplot as plt
-from streamlit_folium import st_folium
 from datetime import datetime
 import time
 from shapely.geometry import Point
@@ -25,6 +25,7 @@ def initialize_ee():
     ee.Initialize(credentials)
 
 initialize_ee()
+
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
