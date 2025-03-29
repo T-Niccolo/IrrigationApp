@@ -312,7 +312,7 @@ with col2:
             last_loc = st.session_state.get("last_location")
             last_time = st.session_state.get("last_location_time", 0)
 
-            location_changed = (last_loc != location) and (now - last_time > 5)
+            location_changed = (last_loc != location) and (now - last_time > 15)
 
             if location_changed:
                 st.session_state["last_location"] = location
