@@ -464,7 +464,7 @@ with col2:
                 ax.set_xlabel("Month")
                 ax.set_ylabel("Irrigation")
                 ax.legend()
-                st.pyplot(fig, use_container_width=True)
+                st.pyplot(fig)
 
                 # 📊 Table
                 df_irrigation['week_irrigation'] = df_irrigation['irrigation'] / 4
@@ -475,10 +475,8 @@ with col2:
 
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
-                st.dataframe(
-                    filtered_df[['month', 'ET0', 'week_irrigation', 'alert']].round(1).reset_index(drop=True),
-                    use_container_width=True
-                )
+                st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation', 'alert']].round(1),
+                             hide_index=True)
 
             else:
                 st.error("❌ No weather data found for this location.")
