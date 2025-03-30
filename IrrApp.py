@@ -473,6 +473,7 @@ with col2:
                 start_month, end_month = irrigation_months
                 filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
+
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
                 st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation', 'alert']].round(1),
