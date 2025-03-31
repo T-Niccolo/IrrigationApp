@@ -235,10 +235,25 @@ st.sidebar.subheader("Farm Data")
 # Layout: 2 columns (map | output)
 col1, col2 = st.columns([4, 6])
 
+if "map_clicked" not in st.session_state:
+    st.session_state.map_clicked = False
+
 with col1:
     st.subheader("Select your farm Location")
+
     # 🗺️ **Map Selection**
     map_data = display_map()
+
+    if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
+        st.info("🖱️ Select any new location.")
+    else:
+        st.info("🖱️ Click a location on the map to begin.")
+
+
+
+
+
+
 
 with col2:
     st.subheader("Report")
@@ -333,11 +348,5 @@ with col2:
             image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image on the graphical output", use_container_width=True)
 
-            st.info("🖱️ Click a location on the map to begin.")
-
     else:
         st.info("🖱️ Click a location on the map to begin.")
-
-
-
-
