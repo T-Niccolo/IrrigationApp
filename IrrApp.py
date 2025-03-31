@@ -13,6 +13,7 @@ from shapely.geometry import Point
 from google.oauth2 import service_account
 from PIL import Image
 
+
 st.set_page_config(layout='wide')
 
 # Function to initialize Earth Engine with credentials
@@ -25,10 +26,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-#initialize_ee()
+initialize_ee()
 
-ee.Initialize()
-ee.Authenticate()
+#ee.Initialize()
+#ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
