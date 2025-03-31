@@ -11,8 +11,6 @@ from datetime import datetime
 import time
 from shapely.geometry import Point
 from google.oauth2 import service_account
-from PIL import Image
-
 
 st.set_page_config(layout='wide')
 
