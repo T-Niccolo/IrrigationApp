@@ -24,8 +24,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
+ee.Initialize()
+ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
@@ -46,76 +48,7 @@ def get_ndvi(lat, lon):
         return None
 
 
-# 🌧️ Function to Fetch Weather Data (ET0 & Rain)
-def get_rain(lat, lon):
-    # Calculate last November's date dynamically
-    today = datetime.now()
-    last_november = datetime(today.year - 1 if today.month < 11 else today.year, 11, 1).date()
 
-    # API Request URL
-    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={last_november}&end_date={today.date()}&daily=rain_sum&timezone=auto"
-
-    # Fetch data
-    response = requests.get(url)
-    data = response.json()
-
-    # Check if response contains 'daily' data
-    if 'daily' not in data:
-        return pd.DataFrame()
-
-    # Convert to DataFrame
-    df = pd.DataFrame(data['daily'])
-    df['time'] = pd.to_datetime(df['time'])
-    df.rename(columns={'rain_sum': 'rain'}, inplace=True)
-
-    # Aggregate total rain per month since last November
-    df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'rain': 'sum'}).reset_index()
-    df_monthly['time'] = df_monthly['time'].dt.to_timestamp()  # Convert Period to Timestamp
-    df_monthly['month'] = df_monthly['time'].dt.month
-
-    return df_monthly
-
-
-def get_day_rain_era5(lat, lon):
-    # Dates: from last Nov 1 to today
-    today = datetime.now()
-    year = today.year if today.month >= 11 else today.year - 1
-    start_date = datetime(year, 11, 1)
-
-    point = ee.Geometry.Point(lon, lat)
-
-    # ERA5-Land: daily total precipitation
-    collection = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR") \
-        .filterDate(start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")) \
-        .select("total_precipitation_sum")
-
-    # Extract daily values
-    def extract(img):
-        date = ee.Date(img.get("system:time_start")).format("YYYY-MM-dd")
-        rain = img.reduceRegion(
-            reducer=ee.Reducer.first(),
-            geometry=point,
-            scale=1000
-        ).get("total_precipitation_sum")
-        return ee.Feature(None, {"date": date, "rain": rain})
-
-    # Map and get all features in one call
-    features = ee.FeatureCollection(collection.map(extract)).getInfo()["features"]
-
-    # Extract properties into a list of dicts
-    data = [{"date": f["properties"]["date"], "rain": f["properties"]["rain"]} for f in features]
-
-    # Convert to DataFrame
-    df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["date"])
-    df["rain"] = pd.to_numeric(df["rain"], errors="coerce") * 1000  # meters → mm
-    df = df.dropna()
-
-    df["month"] = df["date"].dt.to_period("M")
-    df_monthly = df.groupby("month")["rain"].sum().reset_index()
-    df_monthly["month"] = df_monthly["month"].dt.month
-
-    return df_monthly
 
 
 def get_rain_era5(lat, lon):
@@ -150,92 +83,6 @@ def get_rain_era5(lat, lon):
         return None
 
 
-def get_ET0(lat, lon):
-    # Calculate start date (5 years ago from today)
-    today = datetime.now().date()
-    start_date = datetime(today.year - 5, today.month, 1).date()  # First day of the month 5 years ago
-
-    # API Request URL
-    url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={today}&daily=et0_fao_evapotranspiration&timezone=auto"
-
-    # Fetch data
-    response = requests.get(url)
-    data = response.json()
-
-    # Check if response contains 'daily' data
-    if 'daily' not in data:
-        return pd.DataFrame()
-
-    # Convert to DataFrame
-    df = pd.DataFrame(data['daily'])
-    df['time'] = pd.to_datetime(df['time'])
-    df.rename(columns={'et0_fao_evapotranspiration': 'ET0'}, inplace=True)
-
-    # Calculate monthly average ET0 over the last 5 years
-    df_monthly = df.groupby(df['time'].dt.to_period("M")).agg({'ET0': 'sum'}).reset_index()
-    df_monthly['time'] = df_monthly['time'].dt.to_timestamp()  # Convert Period to Timestamp
-    df_monthly['month'] = df_monthly['time'].dt.month
-    df_monthly['year'] = df_monthly['time'].dt.year
-
-    # Calculate 5-year average ET0 for each month
-    df_avg = df_monthly.groupby('month').agg({'ET0': 'mean'}).reset_index()
-
-    return df_avg
-
-
-def get_day_et0_gridmet(lat, lon):
-
-    # 5 full years
-    today = datetime.now()
-    start_date = datetime(today.year - 5, 1, 1)
-    end_date = datetime(today.year - 1, 12, 31)
-
-    point = ee.Geometry.Point(lon, lat)
-
-    # Load GRIDMET ET₀ (etr in mm/day)
-    collection = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET") \
-        .filterDate(start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")) \
-        .select("eto")
-
-    # Extract daily ET₀ and date
-    def extract(img):
-        date = ee.Date(img.get("system:time_start")).format("YYYY-MM-dd")
-        et0 = img.reduceRegion(
-            reducer=ee.Reducer.first(),
-            geometry=point,
-            scale=4000
-        ).get("eto")
-        return ee.Feature(None, {"date": date, "et0": et0})
-
-    fc = ee.FeatureCollection(collection.map(extract))
-
-    # Attempt to get data
-    try:
-        features = fc.getInfo()["features"]
-        data = [{"date": f["properties"]["date"], "et0": f["properties"]["et0"]} for f in features]
-    except Exception:
-        return None  # Something went wrong (e.g. no data)
-
-    # Convert to DataFrame
-    df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["date"])
-    df["et0"] = pd.to_numeric(df["et0"], errors="coerce")
-
-    df = df.dropna()
-
-    if df.empty:
-        return None  # Still no usable data
-
-    # Group by month and year
-    df["year"] = df["date"].dt.year
-    df["month"] = df["date"].dt.month
-    df_monthly = df.groupby(["year", "month"])["et0"].sum().reset_index()
-
-    # Monthly average ET0 across years
-    avg_monthly_et0 = df_monthly.groupby("month")["et0"].mean().reset_index()
-    avg_monthly_et0.rename(columns={"et0": "ET0"}, inplace=True)
-
-    return avg_monthly_et0
 
 
 def get_et0_gridmet(lat, lon):
@@ -401,8 +248,8 @@ with col2:
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
-                                 step=int(round(20 * conversion_factor)))
-    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
+                                 step=int(round(20 * conversion_factor)), help="Set the amount of water provided during winter, before the starting month")
+    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="Select the months window of interest. By default it starts at the beginning of next month")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -421,7 +268,7 @@ with col2:
             location_changed = (last_loc != location) and (now - last_time > 5)
 
             if location_changed:
-                st.session_state["last_location"] = location
+                #st.session_state["last_location"] = location
                 st.session_state["rain"] = get_rain_era5(lat, lon)
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
@@ -441,7 +288,8 @@ with col2:
 
                 total_irrigation = df_irrigation['irrigation'].sum()
                 m_irrigation = st.sidebar.slider("Water Allocation", 0, int(round(1500 * conversion_factor)),
-                                                 int(total_irrigation), step=int(round(20 * conversion_factor)))
+                                                 int(total_irrigation), step=int(round(20 * conversion_factor)),
+                                                 help="Starts at suggested total water allocation for the selected period. Can be changed to recompute and give another porediction on the new water availability")
 
                 irrigation_factor = m_irrigation / total_irrigation
 
@@ -484,7 +332,15 @@ with col2:
                 st.error("❌ No weather data found for this location.")
         else:
             st.info("🖱️ Click a location on the map to begin.")
+
+            from PIL import Image
+
+            image = Image.open("img/Screenshot 2025-03-31 115726.png")  # Assuming "images" folder in your repo
+            st.image(image, caption="Example image on the graphical output", use_container_width=True)
     else:
         st.info("🖱️ Click a location on the map to begin.")
+        from PIL import Image
+
+
 
 
