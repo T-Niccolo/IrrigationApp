@@ -330,14 +330,13 @@ with col2:
             else:
                 st.error("❌ No weather data found for this location.")
         else:
-            st.info("🖱️ Click a location on the map to begin.")
-
-
             image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image on the graphical output", use_container_width=True)
+
+            st.info("🖱️ Click a location on the map to begin.")
+
     else:
         st.info("🖱️ Click a location on the map to begin.")
-        from PIL import Image
 
 
 
