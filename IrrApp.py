@@ -209,9 +209,9 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
-    df['SW1'] = (rain1 - df['ET1'].cumsum() + df['irrigation'].cumsum()).clip(lower=-1)
+    df['SW1'] = (rain1 - df['ET1'].cumsum() + df['irrigation'].cumsum()).clip(lower=0)
 
-    df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
+    df['alert'] = np.where(df['SW1'] == 0, 'drought', 'safe')
 
     return df
 
@@ -314,7 +314,7 @@ with col2:
                 ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='green',
                         label="Soil Water")
                 # Red overlay where SW1 < 0
-                df_below_zero = df_irrigation[df_irrigation['SW1'] < 0]
+                df_below_zero = df_irrigation[df_irrigation['SW1'] <= 0]
                 if not df_below_zero.empty:
                     ax.plot(df_below_zero['month'], df_below_zero['SW1'], marker='o', linestyle='None', color='red',
                             label="Drought")
