@@ -24,9 +24,9 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
-#ee.Initialize()
+ee.Initialize()
 #ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
@@ -46,9 +46,6 @@ def get_ndvi(lat, lon):
         return round(ndvi.getInfo(), 2) if ndvi.getInfo() is not None else None
     except Exception as e:
         return None
-
-
-
 
 
 def get_rain_era5(lat, lon):
@@ -81,8 +78,6 @@ def get_rain_era5(lat, lon):
         return rain_mm * 1000  # Convert meters to mm
     except Exception:
         return None
-
-
 
 
 def get_et0_gridmet(lat, lon):
@@ -223,6 +218,7 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 # 🌟 **Streamlit UI**
 # st.title("California Almond Calculator")
+
 # 📌 **User Inputs**
 # 🌍 Unit system selection
 st.sidebar.subheader("Farm Data")
@@ -244,16 +240,31 @@ with col1:
     map_data = display_map()
 
 with col2:
+    st.markdown('<a name="output"></a>', unsafe_allow_html=True)
     st.subheader("Report")
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
-                                 step=int(round(20 * conversion_factor)), help="Set the amount of water provided during winter, before the starting month")
-    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="Select the months window of interest. By default it starts at the beginning of next month")
+                                 step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
+    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
         coords = map_data["last_clicked"]
+
+        # Optional: scroll to output on mobile
+        st.markdown('<a name="output"></a>', unsafe_allow_html=True)
+        st.markdown("""
+            <script>
+            const el = document.getElementsByName("output")[0];
+            if (el) {
+                setTimeout(() => {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                }, 300);  // allow time for rendering
+            }
+            </script>
+        """, unsafe_allow_html=True)
+
 
         # ✅ Only proceed if coords is valid
         if coords and "lat" in coords and "lng" in coords:
@@ -289,7 +300,7 @@ with col2:
                 total_irrigation = df_irrigation['irrigation'].sum()
                 m_irrigation = st.sidebar.slider("Water Allocation", 0, int(round(1500 * conversion_factor)),
                                                  int(total_irrigation), step=int(round(20 * conversion_factor)),
-                                                 help="Starts at suggested total water allocation for the selected period. Can be changed to recompute and give another porediction on the new water availability")
+                                                 help="Here's the recommended irrigation. Are you constrained by water availability, or considering extra irrigation for salinity management?")
 
                 irrigation_factor = m_irrigation / total_irrigation
 
@@ -333,6 +344,7 @@ with col2:
         else:
             st.info("🖱️ Click a location on the map to begin.")
 
+            from PIL import Image
 
             image = Image.open("img/Screenshot 2025-03-31 115726.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image on the graphical output", use_container_width=True)
