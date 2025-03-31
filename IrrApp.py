@@ -367,7 +367,8 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
-    df['SW1'] = rain1 - df['ET1'].cumsum() + df['irrigation'].cumsum()
+    df['SW1'] = (rain1 - df['ET1'].cumsum() + df['irrigation'].cumsum()).clip(lower=-1)
+
     df['alert'] = np.where(df['SW1'] < 0, 'drought', 'safe')
 
     return df
