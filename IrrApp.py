@@ -346,7 +346,7 @@ with col2:
 
             from PIL import Image
 
-            image = Image.open("img/Screenshot 2025-03-31 115726.png")  # Assuming "images" folder in your repo
+            image = Image.open("img/Screenshot2025-03-31115726.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image on the graphical output", use_container_width=True)
     else:
         st.info("🖱️ Click a location on the map to begin.")
