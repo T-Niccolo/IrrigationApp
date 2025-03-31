@@ -24,9 +24,9 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-#initialize_ee()
+initialize_ee()
 
-ee.Initialize()
+#ee.Initialize()
 #ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
