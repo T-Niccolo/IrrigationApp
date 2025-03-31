@@ -11,6 +11,7 @@ from datetime import datetime
 import time
 from shapely.geometry import Point
 from google.oauth2 import service_account
+from PIL import Image
 
 st.set_page_config(layout='wide')
 
@@ -240,7 +241,6 @@ with col1:
     map_data = display_map()
 
 with col2:
-    st.markdown('<a name="output"></a>', unsafe_allow_html=True)
     st.subheader("Report")
 
     # --- Sliders (trigger irrigation calc only)
@@ -252,18 +252,6 @@ with col2:
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
         coords = map_data["last_clicked"]
 
-        # Optional: scroll to output on mobile
-        st.markdown('<a name="output"></a>', unsafe_allow_html=True)
-        st.markdown("""
-            <script>
-            const el = document.getElementsByName("output")[0];
-            if (el) {
-                setTimeout(() => {
-                    el.scrollIntoView({ behavior: 'smooth' });
-                }, 300);  // allow time for rendering
-            }
-            </script>
-        """, unsafe_allow_html=True)
 
 
         # ✅ Only proceed if coords is valid
@@ -344,7 +332,6 @@ with col2:
         else:
             st.info("🖱️ Click a location on the map to begin.")
 
-            from PIL import Image
 
             image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image on the graphical output", use_container_width=True)
