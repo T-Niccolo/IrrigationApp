@@ -222,15 +222,15 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 # 📌 **User Inputs**
 # 🌍 Unit system selection
-st.sidebar.subheader("Farm Data")
+
+st.sidebar.image("img/Logo.png")
+
+st.sidebar.header("Farm Data", help = "Set your parameters based on your expertise, specific needs and management practices")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"])
 
 unit_label = "inches" if "Imperial" in unit_system else "mm"
 conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
-st.sidebar.subheader("Farm Data")
-# m_winter = st.sidebar.slider("Winter Irrigation", 0, 40, 0, step=1)
-# irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1)
 
 # Layout: 2 columns (map | output)
 col1, col2 = st.columns([4, 6])
@@ -239,7 +239,7 @@ if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
 
 with col1:
-    st.subheader("Select your farm Location")
+    st.header("Select your farm Location")
 
     # 🗺️ **Map Selection**
     map_data = display_map()
@@ -255,13 +255,19 @@ with col1:
 
 
 
+
+
+
 with col2:
-    st.subheader("Report")
+    st.header("Report")
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
     irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
+
+
+
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -313,19 +319,21 @@ with col2:
 
                 # 📈 Plot
                 fig, ax = plt.subplots()
-                ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='blue', alpha=0.5, label="Irrigation")
-                ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='green',
+                ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='#3897c5', alpha=1, label="Irrigation")
+                ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='#74ac72',
                         label="Soil Water")
                 # Red overlay where SW1 < 0
                 df_below_zero = df_irrigation[df_irrigation['SW1'] <= 0]
                 if not df_below_zero.empty:
-                    ax.plot(df_below_zero['month'], df_below_zero['SW1'], marker='o', linestyle='None', color='red',
+                    ax.plot(df_below_zero['month'], df_below_zero['SW1'], marker='o', linestyle='None', color='#FF4B4B',
                             label="Drought")
+
+                ax.set_ylim(bottom= -3.7 * conversion_factor)
 
                 ax.set_title(
                     f"NDVI: {ndvi:.2f} | ET₀: {df_irrigation['ET0'].sum():.0f} | Irrigation: {total_irrigation:.0f}")
                 ax.set_xlabel("Month")
-                ax.set_ylabel("Irrigation")
+                ax.set_ylabel("Water amount")
                 ax.legend()
                 st.pyplot(fig)
 
@@ -339,8 +347,13 @@ with col2:
 
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
+
+                filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
                 st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation', 'alert']].round(1),
                              hide_index=True)
+
+
+
 
             else:
                 st.error("❌ No weather data found for this location.")
