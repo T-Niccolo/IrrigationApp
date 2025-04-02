@@ -270,7 +270,7 @@ with col2:
 
 
     if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
-        st.info("🖱️Report updated. Change you parameters or select any new location.")
+        st.info("Report updated. Change you parameters or select any new location.")
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
