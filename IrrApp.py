@@ -256,7 +256,7 @@ conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
 
 # Layout: 2 columns (map | output)
-col1, col2 = st.columns([4, 6])
+col1, col2 = st.columns([6, 4])
 
 if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
