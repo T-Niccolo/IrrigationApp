@@ -308,7 +308,7 @@ with col1:
 
             #st.session_state.clicked_location = [lat, lon]  # Now it's not None
 
-            location = (round(lat, 5), round(lon, 5))
+            location = (lat, lon)
 
             # Check if location changed
             now = time.time()
