@@ -166,13 +166,13 @@ def display_map():
     m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
 
     # Add marker only if user clicked
-    if st.session_state.clicked_location:
-        print("clicked")
-        folium.Marker(
-            st.session_state.clicked_location,
-            popup="Clicked Location",
-            icon=folium.Icon(color="red")
-        ).add_to(m)
+    #if st.session_state.clicked_location:
+    #    print("clicked")
+    #    folium.Marker(
+    #        st.session_state.clicked_location,
+    #        popup="Clicked Location",
+    #        icon=folium.Icon(color="red")
+    #    ).add_to(m)
 
     # Satellite base layer
     folium.TileLayer(
