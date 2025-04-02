@@ -141,15 +141,38 @@ def get_et0_gridmet(lat, lon):
 
     return avg_monthly_et0
 
+DEFAULT_CENTER = [35.26, -119.15]
+DEFAULT_ZOOM = 13
 
 # 🌍 Interactive Map for Coordinate Selection
 def display_map():
     # Center and zoom
     map_center = [35.26, -119.15]
-    zoom = 13
+    #zoom = 13
 
-    # Create base map with no tiles
-    m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
+    # Get session state to store the clicked location
+    if "clicked_location" not in st.session_state:
+        st.session_state.clicked_location = None  # No click yet
+        print("noclick")
+
+    #test = st.session_state.get("clicked_location")
+    #print("Clicked location:", test)
+
+    # Set initial center
+    #map_center = st.session_state.clicked_location if st.session_state.clicked_location else DEFAULT_CENTER
+
+
+    # Create map
+    m = folium.Map(location=map_center, zoom_start=DEFAULT_ZOOM, tiles=None)
+
+    # Add marker only if user clicked
+    if st.session_state.clicked_location:
+        print("clicked")
+        folium.Marker(
+            st.session_state.clicked_location,
+            popup="Clicked Location",
+            icon=folium.Icon(color="red")
+        ).add_to(m)
 
     # Satellite base layer
     folium.TileLayer(
@@ -178,7 +201,7 @@ def display_map():
         control=False
     ).add_to(m)
 
-    return st_folium(m, height=600, width=900)
+    return st_folium(m, height=600, width=900, use_container_width=True)
 
 
 # 📊 Function to Calculate Irrigation
@@ -218,12 +241,12 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 
 # 🌟 **Streamlit UI**
-# st.title("California Almond Calculator")
+st.title("ALMOND - irrigation Monthly Annual Planner")
 
 # 📌 **User Inputs**
 # 🌍 Unit system selection
 
-st.sidebar.image("img/Logo.png")
+st.sidebar.image("img/Logo.png", caption= "**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
 st.sidebar.header("Farm Data", help = "Set your parameters based on your expertise, specific needs and management practices")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"])
@@ -238,14 +261,17 @@ col1, col2 = st.columns([4, 6])
 if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
 
-with col1:
+with col2:
     st.header("Select your farm Location")
 
     # 🗺️ **Map Selection**
     map_data = display_map()
+    print("Map data run")
+
 
     if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
         st.info("🖱️ Select any new location.")
+
     else:
         st.info("🖱️ Click a location on the map to begin.")
 
@@ -258,7 +284,7 @@ with col1:
 
 
 
-with col2:
+with col1:
     st.header("Report")
 
     # --- Sliders (trigger irrigation calc only)
@@ -277,7 +303,11 @@ with col2:
 
         # ✅ Only proceed if coords is valid
         if coords and "lat" in coords and "lng" in coords:
+
             lat, lon = coords["lat"], coords["lng"]
+
+            #st.session_state.clicked_location = [lat, lon]  # Now it's not None
+
             location = (round(lat, 5), round(lon, 5))
 
             # Check if location changed
@@ -355,11 +385,12 @@ with col2:
 
 
 
+
             else:
                 st.error("❌ No weather data found for this location.")
         else:
             image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
-            st.image(image, caption="Example image on the graphical output", use_container_width=True)
+            st.image(image, caption="Example image of the graphical output", use_container_width=True)
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
