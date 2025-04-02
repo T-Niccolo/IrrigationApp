@@ -149,6 +149,7 @@ def display_map():
     map_center = [35.26, -119.15]
     zoom = 13
 
+
     # Get session state to store the clicked location
     #if "clicked_location" not in st.session_state:
     #    st.session_state.clicked_location = None  # No click yet
