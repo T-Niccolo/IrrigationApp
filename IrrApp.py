@@ -140,19 +140,19 @@ def get_et0_gridmet(lat, lon):
 
     return avg_monthly_et0
 
-DEFAULT_CENTER = [35.26, -119.15]
-DEFAULT_ZOOM = 13
+#DEFAULT_CENTER = [35.26, -119.15]
+#DEFAULT_ZOOM = 13
 
 # 🌍 Interactive Map for Coordinate Selection
 def display_map():
     # Center and zoom
     map_center = [35.26, -119.15]
-    #zoom = 13
+    zoom = 13
 
     # Get session state to store the clicked location
-    if "clicked_location" not in st.session_state:
-        st.session_state.clicked_location = None  # No click yet
-        print("noclick")
+    #if "clicked_location" not in st.session_state:
+    #    st.session_state.clicked_location = None  # No click yet
+    #    print("noclick")
 
     #test = st.session_state.get("clicked_location")
     #print("Clicked location:", test)
