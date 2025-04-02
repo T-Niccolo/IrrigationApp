@@ -27,7 +27,7 @@ def initialize_ee():
 
 initialize_ee()
 
-#ee.Initialize()
+# ee.Initialize()
 #ee.Authenticate()
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
@@ -246,10 +246,11 @@ st.title("ALMOND - irrigation Monthly Annual Planner")
 # 📌 **User Inputs**
 # 🌍 Unit system selection
 
+# st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
 st.sidebar.image("img/Logo.png", caption= "**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
-st.sidebar.header("Farm Data", help = "Set your parameters based on your expertise, specific needs and management practices")
-unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"])
+st.sidebar.header("Farm Data")
+unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
 
 unit_label = "inches" if "Imperial" in unit_system else "mm"
 conversion_factor = 0.03937 if "Imperial" in unit_system else 1
@@ -277,29 +278,19 @@ with col2:
 
 
 
-
-
-
-
-
-
-
 with col1:
-    st.header("Report")
+    st.write("This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).")
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider("Winter Irrigation", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
     irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
 
-
-
+    irrigation_rate=st.sidebar.slider('Irrigation Rate', float(.5*conversion_factor), float(3.2*conversion_factor), float(1.6*conversion_factor), float(.1*conversion_factor), help = "What is your hourly flow rate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
         coords = map_data["last_clicked"]
-
-
 
         # ✅ Only proceed if coords is valid
         if coords and "lat" in coords and "lng" in coords:
@@ -368,7 +359,7 @@ with col1:
                 st.pyplot(fig)
 
                 # 📊 Table
-                df_irrigation['week_irrigation'] = df_irrigation['irrigation'] / 4
+                df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
 
                 # Filter by selected irrigation months
                 start_month, end_month = irrigation_months
@@ -378,12 +369,11 @@ with col1:
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
 
+                filtered_df['week_irrigation_hours'] = ((filtered_df['week_irrigation_volume'] / irrigation_rate )/.5).round()*.5
+
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
-                st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation', 'alert']].round(1),
+                st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']].round(1),
                              hide_index=True)
-
-
-
 
 
             else:
