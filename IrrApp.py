@@ -162,7 +162,7 @@ def display_map():
 
 
     # Create map
-    m = folium.Map(location=map_center, zoom_start=DEFAULT_ZOOM, tiles=None)
+    m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
 
     # Add marker only if user clicked
     if st.session_state.clicked_location:
