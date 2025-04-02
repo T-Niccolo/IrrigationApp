@@ -29,7 +29,6 @@ initialize_ee()
 
 #ee.Initialize()
 #ee.Authenticate()
-
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
     poi = ee.Geometry.Point([lon, lat])
@@ -270,7 +269,7 @@ with col2:
 
 
     if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
-        st.info("🖱️ Select any new location.")
+        st.info("🖱️Report updated. Change you parameters or select any new location.")
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
