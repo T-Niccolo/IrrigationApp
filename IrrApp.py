@@ -27,8 +27,9 @@ def initialize_ee():
 
 initialize_ee()
 
-# ee.Initialize()
+#ee.Initialize()
 #ee.Authenticate()
+
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 def get_ndvi(lat, lon):
     poi = ee.Geometry.Point([lon, lat])
@@ -267,7 +268,6 @@ with col2:
 
     # 🗺️ **Map Selection**
     map_data = display_map()
-    print("Map data run")
 
 
     if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
@@ -352,9 +352,9 @@ with col1:
                 ax.set_ylim(bottom= -3.7 * conversion_factor)
 
                 ax.set_title(
-                    f"NDVI: {ndvi:.2f} | ET₀: {df_irrigation['ET0'].sum():.0f} | Irrigation: {total_irrigation:.0f}")
+                    f"NDVI: {ndvi:.2f} | ET₀: {df_irrigation['ET0'].sum():.0f} {unit_label} | Irrigation: {total_irrigation:.0f} {unit_label}")
                 ax.set_xlabel("Month")
-                ax.set_ylabel("Water amount")
+                ax.set_ylabel(f"Water amount ({unit_label})")
                 ax.legend()
                 st.pyplot(fig)
 
@@ -372,8 +372,17 @@ with col1:
                 filtered_df['week_irrigation_hours'] = ((filtered_df['week_irrigation_volume'] / irrigation_rate )/.5).round()*.5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
-                st.dataframe(filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']].round(1),
-                             hide_index=True)
+                st.dataframe(
+                    filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
+                    .rename(columns={
+                        'month': 'Month',
+                        'ET0': 'Evapotranspiration (ET₀)',
+                        'week_irrigation_volume': f'Irrigation Volume {unit_label}',
+                        'week_irrigation_hours': f'Irrigation time {unit_label}/h',
+                        'alert': 'Alert'
+                    }).round(1),
+                    hide_index=True
+                )
 
 
             else:
