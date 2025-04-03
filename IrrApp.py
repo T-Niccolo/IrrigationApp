@@ -2,8 +2,6 @@ import streamlit as st
 from streamlit_folium import st_folium
 import pandas as pd
 import folium
-import json
-import requests
 import ee
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,13 +23,15 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+# initialize_ee()
 
-#ee.Initialize()
-#ee.Authenticate()
+# ee.Initialize()
+ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
+@st.cache_data(show_spinner=False)
 def get_ndvi(lat, lon):
+    
     poi = ee.Geometry.Point([lon, lat])
     img = ee.ImageCollection('COPERNICUS/S2_HARMONIZED') \
         .filterDate(f"{datetime.now().year - 1}-05-01", f"{datetime.now().year - 1}-06-01") \
@@ -48,10 +48,8 @@ def get_ndvi(lat, lon):
     except Exception as e:
         return None
 
-
+@st.cache_data(show_spinner=False)
 def get_rain_era5(lat, lon):
-    import ee
-    from datetime import datetime
 
     # Define date range
     today = datetime.now()
@@ -80,9 +78,9 @@ def get_rain_era5(lat, lon):
     except Exception:
         return None
 
-
+@st.cache_data(show_spinner=False)
 def get_et0_gridmet(lat, lon):
-
+    
     today = datetime.now()
     start_date = datetime(today.year - 5, 1, 1)
     end_date = datetime(today.year - 1, 12, 31)
@@ -146,6 +144,7 @@ def get_et0_gridmet(lat, lon):
 
 # 🌍 Interactive Map for Coordinate Selection
 def display_map():
+    
     # Center and zoom
     map_center = [35.26, -119.15]
     zoom = 13
@@ -207,6 +206,7 @@ def display_map():
 
 # 📊 Function to Calculate Irrigation
 def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_factor):
+
     df = et0.copy()
 
     NDVI = ndvi
@@ -258,14 +258,14 @@ conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
 
 # Layout: 2 columns (map | output)
-col1, col2 = st.columns([6, 4])
+col2, col1 = st.columns([6, 4])
 
 if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
 
-with col2:
+with col1:
     st.header("Select your farm Location")
-
+    
     # 🗺️ **Map Selection**
     map_data = display_map()
 
@@ -277,16 +277,15 @@ with col2:
         st.info("🖱️ Click a location on the map to begin.")
 
 
-
-with col1:
-    st.write("This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin - IUSS Pavia).")
+with col2:
+    st.write("This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), **Zac Ellis** (zellis@ucdavis.edu; UC Davis), or **Niccolo' Tricerri** (niccolo.tricerri@unito.it; University of Turin - IUSS Pavia).")
 
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider(f"Winter Irrigation ({unit_label})", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
     irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
 
-    irrigation_rate=st.sidebar.slider(f'Irrigation Rate ({unit_label}/h)', float(.5*conversion_factor), float(3.2*conversion_factor), float(1.6*conversion_factor), float(.1*conversion_factor), help = "What is your hourly flow rate?")
+    irrigation_rate = st.sidebar.slider(f'Irrigation Rate ({unit_label}/hour)', float(.3 * conversion_factor), float(2.8 * conversion_factor), float(1 * conversion_factor), float(.1 * conversion_factor), help="What is your hourly flow rate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -297,8 +296,6 @@ with col1:
 
             lat, lon = coords["lat"], coords["lng"]
 
-            #st.session_state.clicked_location = [lat, lon]  # Now it's not None
-
             location = (lat, lon)
 
             # Check if location changed
@@ -306,13 +303,17 @@ with col1:
             last_loc = st.session_state.get("last_location")
             last_time = st.session_state.get("last_location_time", 0)
 
-            location_changed = (last_loc != location) and (now - last_time > 5)
+            # location_changed = (last_loc != location) and (now - last_time > 5)
 
-            if location_changed:
-                #st.session_state["last_location"] = location
+            if location != last_loc or (now - last_time > 5):
+                # Update session state with the new location and timestamp
+                st.session_state["last_location"] = location
+                st.session_state["last_location_time"] = now
+
+                # Fetch and store weather data
+                st.session_state["et0"] = get_et0_gridmet(lat, lon)
                 st.session_state["rain"] = get_rain_era5(lat, lon)
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
-                st.session_state["et0"] = get_et0_gridmet(lat, lon)
 
             # Retrieve stored values
             rain = st.session_state.get("rain")
@@ -321,7 +322,7 @@ with col1:
 
             if rain is not None and ndvi is not None and et0 is not None:
                 total_rain = rain * conversion_factor
-                m_rain = st.sidebar.slider("Fix Rain to Field", 0, int(round(1000 * conversion_factor)),
+                m_rain = st.sidebar.slider(f"Fix Rain to Field ({unit_label})", 0, int(round(1000 * conversion_factor)),
                                            int(total_rain), step=1, disabled=True)
 
                 # 🔄 Always recalculate irrigation when sliders or location change
@@ -349,7 +350,7 @@ with col1:
                     ax.plot(df_below_zero['month'], df_below_zero['SW1'], marker='o', linestyle='None', color='#FF4B4B',
                             label="Drought")
 
-                ax.set_ylim(bottom= -3.7 * conversion_factor)
+                ax.set_ylim(bottom=-3.7 * conversion_factor)
 
                 ax.set_title(
                     f"NDVI: {ndvi:.2f} | ET₀: {df_irrigation['ET0'].sum():.0f} {unit_label} | Irrigation: {total_irrigation:.0f} {unit_label}")
@@ -359,31 +360,30 @@ with col1:
                 st.pyplot(fig)
 
                 # 📊 Table
+                st.subheader('Weekly Irrigation Updates:')
                 df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
 
                 # Filter by selected irrigation months
                 start_month, end_month = irrigation_months
                 filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
-
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
 
-                filtered_df['week_irrigation_hours'] = ((filtered_df['week_irrigation_volume'] / irrigation_rate )/.5).round()*.5
+                filtered_df['week_irrigation_hours'] = ((filtered_df['week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
                 st.dataframe(
                     filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
                     .rename(columns={
                         'month': 'Month',
-                        'ET0': 'Evapotranspiration (ET₀)',
+                        'ET0': f'ET₀ ({unit_label})',
                         'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
-                        'week_irrigation_hours': f'Irrigation time ({unit_label}/h)',
+                        'week_irrigation_hours': f'Irrigation time (hours)',
                         'alert': 'Alert'
                     }).round(1),
                     hide_index=True
                 )
-
 
             else:
                 st.error("❌ No weather data found for this location.")
