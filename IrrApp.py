@@ -23,10 +23,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-# initialize_ee()
+initialize_ee()
 
 # ee.Initialize()
-ee.Authenticate()
+# ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
