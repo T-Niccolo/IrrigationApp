@@ -264,7 +264,7 @@ if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
 
 with col1:
-    st.header("Select your farm Location")
+    st.header("Select Location")
     
     # 🗺️ **Map Selection**
     map_data = display_map()
