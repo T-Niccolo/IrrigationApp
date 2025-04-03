@@ -282,11 +282,11 @@ with col1:
     st.write("This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin - IUSS Pavia).")
 
     # --- Sliders (trigger irrigation calc only)
-    m_winter = st.sidebar.slider(f"Winter Irrigation {unit_label}", 0, int(round(700 * conversion_factor)), 0,
+    m_winter = st.sidebar.slider(f"Winter Irrigation ({unit_label})", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
     irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
 
-    irrigation_rate=st.sidebar.slider(f'Irrigation Rate {unit_label}/h', float(.5*conversion_factor), float(3.2*conversion_factor), float(1.6*conversion_factor), float(.1*conversion_factor), help = "What is your hourly flow rate?")
+    irrigation_rate=st.sidebar.slider(f'Irrigation Rate ({unit_label}/h)', float(.5*conversion_factor), float(3.2*conversion_factor), float(1.6*conversion_factor), float(.1*conversion_factor), help = "What is your hourly flow rate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -328,7 +328,7 @@ with col1:
                 df_irrigation = calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, 1)
 
                 total_irrigation = df_irrigation['irrigation'].sum()
-                m_irrigation = st.sidebar.slider(f"Water Allocation {unit_label}", 0, int(round(1500 * conversion_factor)),
+                m_irrigation = st.sidebar.slider(f"Water Allocation ({unit_label})", 0, int(round(1500 * conversion_factor)),
                                                  int(total_irrigation), step=int(round(20 * conversion_factor)),
                                                  help="Here's the recommended irrigation. Are you constrained by water availability, or considering extra irrigation for salinity management?")
 
@@ -377,8 +377,8 @@ with col1:
                     .rename(columns={
                         'month': 'Month',
                         'ET0': 'Evapotranspiration (ET₀)',
-                        'week_irrigation_volume': f'Irrigation Volume {unit_label}',
-                        'week_irrigation_hours': f'Irrigation time {unit_label}/h',
+                        'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
+                        'week_irrigation_hours': f'Irrigation time ({unit_label}/h)',
                         'alert': 'Alert'
                     }).round(1),
                     hide_index=True
