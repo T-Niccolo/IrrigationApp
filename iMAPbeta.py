@@ -13,20 +13,10 @@ from PIL import Image
 
 st.set_page_config(layout='wide')
 
-# Function to initialize Earth Engine with credentials
-def initialize_ee():
-    # Get credentials from Streamlit secrets
-    credentials = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=["https://www.googleapis.com/auth/earthengine"]
-    )
-    # Initialize Earth Engine
-    ee.Initialize(credentials)
 
-# initialize_ee()
-
+ee.Authenticate()
 ee.Initialize()
-# ee.Authenticate()
+
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
