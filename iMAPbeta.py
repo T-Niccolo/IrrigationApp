@@ -410,16 +410,26 @@ with col2:
                     pdf_bytes = pdf.output(dest="S").encode("latin1")
                     return pdf_bytes
 
-                # Add a publish button (place it where appropriate in your layout)
+
                 if st.button("Publish Report"):
                     # Ensure the required data exists in session state
                     if all(key in st.session_state for key in ["ndvi", "rain", "et0"]):
-                        # Use your latest plot figure and irrigation DataFrame.
-                        # Here, 'fig', 'df_irrigation', 'ndvi', and 'total_irrigation' should have been created earlier.
+                        # Generate the PDF report
                         pdf_report = create_pdf_report(fig, df_irrigation, ndvi, total_irrigation, unit_label)
-                        st.download_button("Download PDF Report", pdf_report, "Irrigation_Report.pdf", "application/pdf")
+
+                        # Save PDF temporarily and provide a download link
+                        pdf_filename = "Irrigation_Report.pdf"
+                        with open(pdf_filename, "wb") as f:
+                            f.write(pdf_report)
+
+                        with open(pdf_filename, "rb") as f:
+                            st.download_button("Download PDF Report", f, pdf_filename, "application/pdf")
+
                     else:
                         st.error("❌ No weather data available to generate the report.")
+
+
+
 
             else:
                 st.error("❌ No weather data found for this location.")
