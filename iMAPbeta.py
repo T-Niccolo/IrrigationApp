@@ -382,7 +382,10 @@ with col2:
                     pdf = FPDF()
                     pdf.add_page()
                     pdf.set_font("Arial", 'B', 16)
-                    pdf.cell(0, 10, "Irrigation Monthly Annual Planner Report", ln=True, align="C")
+                    pdf.cell(0, 10, "ALMOND - iMAP", ln=True, align="C")
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(0, 10, "irrigation Monthly Annual Planner Report for ALMOND orchards", ln=True, align="C")
+
                     
                     pdf.ln(10)
                     pdf.set_font("Arial", size=12)
@@ -391,7 +394,7 @@ with col2:
                     
                     pdf.ln(10)
                     pdf.cell(0, 10, "Irrigation Details:", ln=True)
-                    # Add details from the DataFrame (one row per line)
+
                     for index, row in df_irrigation.iterrows():
                         pdf.cell(0, 10, txt=str(row.to_dict()), ln=True)
                     
@@ -414,20 +417,11 @@ with col2:
                 if st.button("Publish Report"):
                     # Ensure the required data exists in session state
                     if all(key in st.session_state for key in ["ndvi", "rain", "et0"]):
-                        # Generate the PDF report
                         pdf_report = create_pdf_report(fig, df_irrigation, ndvi, total_irrigation, unit_label)
-
-                        # Save PDF temporarily and provide a download link
-                        pdf_filename = "Irrigation_Report.pdf"
-                        with open(pdf_filename, "wb") as f:
-                            f.write(pdf_report)
-
-                        with open(pdf_filename, "rb") as f:
-                            st.download_button("Download PDF Report", f, pdf_filename, "application/pdf")
-
+                        st.download_button("Download PDF Report", pdf_report, "Irrigation_Report.pdf",
+                                           "application/pdf")
                     else:
                         st.error("❌ No weather data available to generate the report.")
-
 
 
 
