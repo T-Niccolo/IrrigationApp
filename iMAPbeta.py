@@ -375,6 +375,50 @@ with col2:
                     hide_index=True
                 )
 
+                # Function to create a PDF report
+                def create_pdf_report(fig, df_irrigation, ndvi, total_irrigation, unit_label):
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(0, 10, "Irrigation Monthly Annual Planner Report", ln=True, align="C")
+                    
+                    pdf.ln(10)
+                    pdf.set_font("Arial", size=12)
+                    pdf.cell(0, 10, f"NDVI: {ndvi}", ln=True)
+                    pdf.cell(0, 10, f"Total Irrigation: {total_irrigation:.2f} {unit_label}", ln=True)
+                    
+                    pdf.ln(10)
+                    pdf.cell(0, 10, "Irrigation Details:", ln=True)
+                    # Add details from the DataFrame (one row per line)
+                    for index, row in df_irrigation.iterrows():
+                        pdf.cell(0, 10, txt=str(row.to_dict()), ln=True)
+                    
+                    pdf.ln(10)
+                    pdf.cell(0, 10, "Irrigation Plot:", ln=True)
+                    
+                    # Save the current plot to a temporary image file
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+                        fig.savefig(tmpfile.name, format="PNG")
+                        tmpfile.seek(0)
+                        image_path = tmpfile.name
+
+                    # Add the image to the PDF (adjust size as needed)
+                    pdf.image(image_path, x=10, w=pdf.w - 20)
+
+                    pdf_bytes = pdf.output(dest="S").encode("latin1")
+                    return pdf_bytes
+
+                # Add a publish button (place it where appropriate in your layout)
+                if st.button("Publish Report"):
+                    # Ensure the required data exists in session state
+                    if all(key in st.session_state for key in ["ndvi", "rain", "et0"]):
+                        # Use your latest plot figure and irrigation DataFrame.
+                        # Here, 'fig', 'df_irrigation', 'ndvi', and 'total_irrigation' should have been created earlier.
+                        pdf_report = create_pdf_report(fig, df_irrigation, ndvi, total_irrigation, unit_label)
+                        st.download_button("Download PDF Report", pdf_report, "Irrigation_Report.pdf", "application/pdf")
+                    else:
+                        st.error("❌ No weather data available to generate the report.")
+
             else:
                 st.error("❌ No weather data found for this location.")
         else:
