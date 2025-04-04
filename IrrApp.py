@@ -362,6 +362,7 @@ with col2:
                 # 📊 Table
                 st.subheader('Weekly Irrigation Updates:')
                 df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
+                df_irrigation['ET0'] = df_irrigation['ET0'] / 4
 
                 # Filter by selected irrigation months
                 start_month, end_month = irrigation_months
