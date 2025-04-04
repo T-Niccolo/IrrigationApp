@@ -10,6 +10,8 @@ import time
 from shapely.geometry import Point
 from google.oauth2 import service_account
 from PIL import Image
+from fpdf import FPDF
+import tempfile
 
 st.set_page_config(layout='wide')
 
