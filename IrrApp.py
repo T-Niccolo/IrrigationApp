@@ -23,10 +23,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
-# ee.Initialize()
-# ee.Authenticate()
+ee.Initialize()
+ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
@@ -242,12 +242,14 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 
 # 🌟 **Streamlit UI**
-st.title("ALMOND - irrigation Monthly Annual Planner")
+st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>This is a research report. For further information contact:  <b>Or Sperling</b> (ARO-Volcani)  <a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Email</strong></a>, <b>Maciej Zwieniecki</b> (UC Davis)  <a href=\"mailto:mzwienie@ucdavis.edu\"> <strong>Email</strong></a>, <b>Zack Ellis</b> (UC Davis)  <a href=\"mailto:zellis@ucdavis.edu\"> <strong>Email</strong></a>, <b>Niccolò Tricerri</b> (UNITO - IUSS Pavia)  <a href=\"mailto:niccolo.tricerri@unito.it\"> <strong>Email</strong></a>  </p>", unsafe_allow_html=True)
+
 
 # 📌 **User Inputs**
 # 🌍 Unit system selection
 
-# st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
+#st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
 st.sidebar.image("img/Logo.png", caption= "**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
 st.sidebar.header("Farm Data")
@@ -259,6 +261,7 @@ conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
 # Layout: 2 columns (map | output)
 col2, col1 = st.columns([6, 4])
+#st.markdown("<p style='text-align: center; font-size: 12px; color: gray;'>Long and boring disclaimer on small print at the bottom of the page?</p>", unsafe_allow_html=True)
 
 if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
@@ -278,8 +281,6 @@ with col1:
 
 
 with col2:
-    st.write("This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), **Zac Ellis** (zellis@ucdavis.edu; UC Davis), or **Niccolo' Tricerri** (niccolo.tricerri@unito.it; University of Turin - IUSS Pavia).")
-
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider(f"Winter Irrigation ({unit_label})", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
@@ -394,3 +395,5 @@ with col2:
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
+
+
