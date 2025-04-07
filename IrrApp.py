@@ -243,7 +243,7 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 # 🌟 **Streamlit UI**
 st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 20px'>This is a research report founded by <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a> </p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 20px'>This is a research report founded by <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a>. </p>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center;'>For further information contact:  <b>Or Sperling</b> (ARO-Volcani)  <a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Email</strong></a>, <b>Maciej Zwieniecki</b> (UC Davis)  <a href=\"mailto:mzwienie@ucdavis.edu\"> <strong>Email</strong></a>, <b>Zack Ellis</b> (UC Davis)  <a href=\"mailto:zellis@ucdavis.edu\"> <strong>Email</strong></a>, <b>Niccolò Tricerri</b> (UNITO - IUSS Pavia)  <a href=\"mailto:niccolo.tricerri@unito.it\"> <strong>Email</strong></a>  </p>", unsafe_allow_html=True)
 
 
