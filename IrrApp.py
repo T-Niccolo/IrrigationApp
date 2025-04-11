@@ -566,7 +566,7 @@ with col2:
                     pdf.set_y(-33)
                     pdf.set_font("Arial", size=11)
                     pdf.cell(0, 10, current_date, 0, 0, 'L')
-                    pdf.cell(0, 10, "Report based on the work of: Or, Maciej, Zac and Niccolò.", 0, 0, 'R')
+                    pdf.cell(0, 10, "Report from Or, Maciej, Zac, and Niccolò.", 0, 0, 'R')
 
                     pdf_bytes = pdf.output(dest="S").encode("latin1")
                     return pdf_bytes
