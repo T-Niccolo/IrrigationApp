@@ -242,6 +242,21 @@ def save_map_as_image(folium_map):
 
     # Set up Selenium WebDriver in headless mode
     options = Options()
+
+    import subprocess
+
+    # List where chromium might be installed
+    possible_paths = ["/usr/bin", "/usr/local/bin", "/snap/bin"]
+
+    for path in possible_paths:
+        try:
+            result = subprocess.run(["ls", "-l", f"{path}/chromium-browser"], capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"✅ Found Chromium at: {path}/chromium-browser")
+        except Exception as e:
+            print(f"Error checking {path}: {e}")
+
+
     options.binary_location = "/usr/bin/chromium-browser"  # <<< Corrected
     options.add_argument("--headless=new")  # Modern headless mode
     options.add_argument("--disable-gpu")
@@ -258,6 +273,7 @@ def save_map_as_image(folium_map):
     # Save screenshot
     driver.save_screenshot(temp_image_path)
     driver.quit()
+
 
     # Return the path to the image
     return temp_image_path
