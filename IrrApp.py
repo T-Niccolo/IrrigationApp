@@ -18,6 +18,10 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
+
+# Automatically download and install the correct version of chromedriver
+chromedriver_autoinstaller.install()
+
 # List where chromium might be installed
 possible_paths = ["/usr/bin", "/usr/local/bin", "/snap/bin"]
 
@@ -30,8 +34,7 @@ for path in possible_paths:
     except Exception as e:
         print(f"Error checking {path}: {e}")
 
-# Automatically download and install the correct version of chromedriver
-chromedriver_autoinstaller.install()
+
 
 
 
