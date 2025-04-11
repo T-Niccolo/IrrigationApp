@@ -242,19 +242,20 @@ def save_map_as_image(folium_map):
 
     # Set up Selenium WebDriver in headless mode
     options = Options()
-    chrome_options.binary_location = "/usr/bin/chromium-browser"  # <<< Explicit path for streamlit
-    options.add_argument("--headless=new")  # Use the newer headless mode if available
-    options.add_argument("--disable-gpu")  # Disable GPU (often recommended for headless)
-    options.add_argument("--no-sandbox")  # Bypass OS security model (helpful in some environments)
-    options.add_argument("--disable-dev-shm-usage")  # Prevent shared memory issues
-    options.headless = True
+    options.binary_location = "/usr/bin/chromium-browser"  # <<< Corrected
+    options.add_argument("--headless=new")  # Modern headless mode
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    # Launch headless Chrome
     driver = webdriver.Chrome(options=options)
 
-    # Load the saved map
+    # Load the local HTML file
     driver.get("file:///" + temp_html_path)
-    time.sleep(2)  # Wait for the map to load
+    time.sleep(2)
 
-    # Take a screenshot and save it as PNG
+    # Save screenshot
     driver.save_screenshot(temp_image_path)
     driver.quit()
 
