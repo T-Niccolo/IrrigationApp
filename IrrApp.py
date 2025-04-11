@@ -18,6 +18,18 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
+# List where chromium might be installed
+possible_paths = ["/usr/bin", "/usr/local/bin", "/snap/bin"]
+
+import subprocess
+for path in possible_paths:
+    try:
+        result = subprocess.run(["ls", "-l", f"{path}/chromium-browser"], capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✅ Found Chromium at: {path}/chromium-browser")
+    except Exception as e:
+        print(f"Error checking {path}: {e}")
+
 # Automatically download and install the correct version of chromedriver
 chromedriver_autoinstaller.install()
 
@@ -241,19 +253,6 @@ def save_map_as_image(folium_map):
         temp_image_path = tmp_image_file.name
 
     # Set up Selenium WebDriver in headless mode
-
-    import subprocess
-
-    # List where chromium might be installed
-    possible_paths = ["/usr/bin", "/usr/local/bin", "/snap/bin"]
-
-    for path in possible_paths:
-        try:
-            result = subprocess.run(["ls", "-l", f"{path}/chromium-browser"], capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"✅ Found Chromium at: {path}/chromium-browser")
-        except Exception as e:
-            print(f"Error checking {path}: {e}")
 
     options = Options()
     options.binary_location = "/usr/bin/chromium-browser"  # <<< Corrected
