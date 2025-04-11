@@ -18,8 +18,20 @@ import os
 
 st.set_page_config(layout='wide')
 
-ee.Authenticate()
-ee.Initialize()
+# Function to initialize Earth Engine with credentials
+def initialize_ee():
+    # Get credentials from Streamlit secrets
+    credentials = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/earthengine"]
+    )
+    # Initialize Earth Engine
+    ee.Initialize(credentials)
+
+initialize_ee()
+
+#ee.Authenticate()
+#ee.Initialize()
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
@@ -622,3 +634,5 @@ with col2:
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
+
+
