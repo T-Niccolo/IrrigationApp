@@ -11,8 +11,10 @@ from google.oauth2 import service_account
 from fpdf import FPDF
 import tempfile
 import os
-from staticmap import StaticMap, CircleMarker
 from PIL import Image
+from io import BytesIO
+from staticmap import StaticMap, IconMarker
+
 
 st.set_page_config(layout='wide')
 
@@ -212,20 +214,36 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 
 
-def save_map_as_image_static(lat, lon, zoom=12, size=(600, 400)):
-    # Create static map with a marker
-    m = StaticMap(size[0], size[1])
-    marker = CircleMarker((lon, lat), 'red', 12)
+def save_map_as_image_static(lat, lon, zoom=15, size=(600, 450), marker_path='img/Marker.png', marker_width=50):
+    # Esri satellite tile provider
+    esri_satellite_url = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+
+    # Create static map
+    m = StaticMap(size[0], size[1], url_template=esri_satellite_url)
+
+    # Open and resize marker image by width (keeping aspect ratio)
+    with Image.open(marker_path) as img:
+        # Get original aspect ratio
+        aspect_ratio = img.height / img.width
+        new_height = int(marker_width * aspect_ratio)
+        resized_img = img.resize((marker_width, new_height), Image.Resampling.LANCZOS)
+
+        buffer = BytesIO()
+        resized_img.save(buffer, format='PNG')
+        buffer.seek(0)
+
+    # Create and add marker
+    marker = IconMarker((lon, lat), buffer, offset_x=marker_width // 2, offset_y=new_height)
     m.add_marker(marker)
 
+    # Render and save
     image = m.render(zoom=zoom)
-
-    # Save to a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
         image_path = tmp_file.name
         image.save(image_path)
 
     return image_path
+
 
 # 🌟 **Streamlit UI**
 st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
@@ -418,29 +436,8 @@ with col2:
                     pdf.cell(0, 10, "ALMOND - iMAP", ln=True, align="L")
                     pdf.set_font("Arial", 'B', 14)
                     pdf.cell(0, 9, "irrigation Monthly Annual Planner Report for ALMOND orchards", ln=True, align="L")
-                    pdf.image("img/Logo.png", x=140, y=10, w=80)
+                    pdf.image("img/Logo.png", x=137, y=10, w=80)
 
-                    # Center and zoom
-                    map_center = [lat, lon]
-                    zoom = 14
-
-                    # Create map
-                    n = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
-
-                    # Satellite base layer
-                    folium.TileLayer(
-                        tiles="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-                        attr="Esri World Imagery",
-                        name="Satellite",
-                        overlay=False,
-                        control=False
-                    ).add_to(n)
-
-
-                    folium.Marker(
-                        location=[lat, lon],
-                        popup=f'Coordinates: {lat}, {lon}'
-                    ).add_to(n)
 
                     pdf.ln(2)
                     pdf.set_font("Arial", size=13)
