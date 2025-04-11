@@ -18,23 +18,8 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-
 # Automatically download and install the correct version of chromedriver
 chromedriver_autoinstaller.install()
-
-# List where chromium might be installed
-possible_paths = ["/usr/bin", "/usr/local/bin", "/snap/bin"]
-
-import subprocess
-for path in possible_paths:
-    try:
-        result = subprocess.run(["ls", "-l", f"{path}/chromium-browser"], capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"✅ Found Chromium at: {path}/chromium-browser")
-    except Exception as e:
-        print(f"Error checking {path}: {e}")
-
-
 
 
 
@@ -50,10 +35,10 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+#initialize_ee()
 
-#ee.Authenticate()
-#ee.Initialize()
+ee.Authenticate()
+ee.Initialize()
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
@@ -256,25 +241,21 @@ def save_map_as_image(folium_map):
         temp_image_path = tmp_image_file.name
 
     # Set up Selenium WebDriver in headless mode
-
     options = Options()
-    options.binary_location = "/usr/bin/chromium-browser"  # <<< Corrected
-    options.add_argument("--headless=new")  # Modern headless mode
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-
-    # Launch headless Chrome
+    options.add_argument("--headless=new")  # Use the newer headless mode if available
+    options.add_argument("--disable-gpu")  # Disable GPU (often recommended for headless)
+    options.add_argument("--no-sandbox")  # Bypass OS security model (helpful in some environments)
+    options.add_argument("--disable-dev-shm-usage")  # Prevent shared memory issues
+    options.headless = True
     driver = webdriver.Chrome(options=options)
 
-    # Load the local HTML file
+    # Load the saved map
     driver.get("file:///" + temp_html_path)
-    time.sleep(2)
+    time.sleep(2)  # Wait for the map to load
 
-    # Save screenshot
+    # Take a screenshot and save it as PNG
     driver.save_screenshot(temp_image_path)
     driver.quit()
-
 
     # Return the path to the image
     return temp_image_path
