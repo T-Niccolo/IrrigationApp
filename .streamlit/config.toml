@@ -2,10 +2,4 @@
 base="light"
 primaryColor="#74ac72"
 
-[server]
-headless = true
-enableCORS = false
-
-[global]
-runOnSave = true
 
