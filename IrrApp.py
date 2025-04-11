@@ -32,6 +32,7 @@ initialize_ee()
 #ee.Initialize()
 #ee.Authenticate()
 
+
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
 def get_ndvi(lat, lon):
@@ -599,18 +600,6 @@ with col2:
                             st.session_state["pdf_downloaded"] = True  # hide button after download
                 else:
                     st.error("❌ No weather data available to generate the report.")
-
-
-
-
-            else:
-                st.error("❌ No weather data found for this location.")
-        else:
-            image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
-            st.image(image, caption="Example image of the graphical output", use_container_width=True)
-
-    else:
-        st.info("🖱️ Click a location on the map to begin.")
 
 
 
