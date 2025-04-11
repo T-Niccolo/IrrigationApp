@@ -242,6 +242,7 @@ def save_map_as_image(folium_map):
 
     # Set up Selenium WebDriver in headless mode
     options = Options()
+    chrome_options.binary_location = "/usr/bin/chromium-browser"  # <<< Explicit path
     options.add_argument("--headless=new")  # Use the newer headless mode if available
     options.add_argument("--disable-gpu")  # Disable GPU (often recommended for headless)
     options.add_argument("--no-sandbox")  # Bypass OS security model (helpful in some environments)
