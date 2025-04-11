@@ -10,8 +10,12 @@ import time
 from shapely.geometry import Point
 from google.oauth2 import service_account
 from PIL import Image
+from fpdf import FPDF
+import os
 
-st.set_page_config(layout='wide')
+import tempfile
+import asyncio
+from playwright.async_api import async_playwright
 
 # Function to initialize Earth Engine with credentials
 def initialize_ee():
@@ -25,13 +29,15 @@ def initialize_ee():
 
 initialize_ee()
 
-#ee.Initialize()
-#ee.Authenticate()
+st.set_page_config(layout='wide')
+
+ee.Authenticate()
+ee.Initialize()
+
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
 def get_ndvi(lat, lon):
-
     poi = ee.Geometry.Point([lon, lat])
     img = ee.ImageCollection('COPERNICUS/S2_HARMONIZED') \
         .filterDate(f"{datetime.now().year - 1}-05-01", f"{datetime.now().year - 1}-06-01") \
@@ -48,9 +54,9 @@ def get_ndvi(lat, lon):
     except Exception as e:
         return None
 
+
 @st.cache_data(show_spinner=False)
 def get_rain_era5(lat, lon):
-
     # Define date range
     today = datetime.now()
     start_year = today.year if today.month >= 11 else today.year - 1
@@ -61,9 +67,9 @@ def get_rain_era5(lat, lon):
     point = ee.Geometry.Point(lon, lat)
 
     # Get total precipitation image
-    rain_sum = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR") \
+    rain_sum = ee.ImageCollection("OREGONSTATE/PRISM/AN81d") \
         .filterDate(start, end) \
-        .select("total_precipitation_sum") \
+        .select("ppt") \
         .sum()
 
     # Reduce to value at point
@@ -71,16 +77,16 @@ def get_rain_era5(lat, lon):
         rain_mm = rain_sum.reduceRegion(
             reducer=ee.Reducer.first(),
             geometry=point,
-            scale=1000
-        ).get("total_precipitation_sum").getInfo()
+            scale=4638.3
+        ).get("ppt").getInfo()
 
-        return rain_mm * 1000  # Convert meters to mm
+        return rain_mm  # Convert meters to mm
     except Exception:
         return None
 
+
 @st.cache_data(show_spinner=False)
 def get_et0_gridmet(lat, lon):
-
     today = datetime.now()
     start_date = datetime(today.year - 5, 1, 1)
     end_date = datetime(today.year - 1, 12, 31)
@@ -139,40 +145,18 @@ def get_et0_gridmet(lat, lon):
 
     return avg_monthly_et0
 
-#DEFAULT_CENTER = [35.26, -119.15]
-#DEFAULT_ZOOM = 13
+
+# DEFAULT_CENTER = [35.26, -119.15]
+# DEFAULT_ZOOM = 13
 
 # 🌍 Interactive Map for Coordinate Selection
 def display_map():
-
     # Center and zoom
     map_center = [35.26, -119.15]
-    zoom = 13
-
-
-    # Get session state to store the clicked location
-    #if "clicked_location" not in st.session_state:
-    #    st.session_state.clicked_location = None  # No click yet
-    #    print("noclick")
-
-    #test = st.session_state.get("clicked_location")
-    #print("Clicked location:", test)
-
-    # Set initial center
-    #map_center = st.session_state.clicked_location if st.session_state.clicked_location else DEFAULT_CENTER
-
+    zoom = 12
 
     # Create map
     m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
-
-    # Add marker only if user clicked
-    #if st.session_state.clicked_location:
-    #    print("clicked")
-    #    folium.Marker(
-    #        st.session_state.clicked_location,
-    #        popup="Clicked Location",
-    #        icon=folium.Icon(color="red")
-    #    ).add_to(m)
 
     # Satellite base layer
     folium.TileLayer(
@@ -206,7 +190,6 @@ def display_map():
 
 # 📊 Function to Calculate Irrigation
 def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_factor):
-
     df = et0.copy()
 
     NDVI = ndvi
@@ -241,17 +224,44 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     return df
 
 
+def save_map_as_image(folium_map):
+    # Save the Folium map to a temporary HTML file
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_html_file:
+        temp_html_path = tmp_html_file.name
+        folium_map.save(temp_html_path)
+
+    # Generate a matching temporary image path
+    temp_image_path = temp_html_path.replace(".html", ".png")
+
+    # Define the async screenshot logic
+    async def take_screenshot(html_path, image_path):
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page(viewport={"width": 800, "height": 600})
+            await page.goto(f"file://{html_path}")
+            await page.screenshot(path=image_path)
+            await browser.close()
+
+    # Run the async part synchronously
+    asyncio.run(take_screenshot(temp_html_path, temp_image_path))
+
+    return temp_image_path
+
+
 # 🌟 **Streamlit UI**
 st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 20px'>This is a research report founded by <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a>. </p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>For further information contact: <a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Or Sperling</strong></a> (ARO-Volcani), <a href=\"mailto:mzwienie@ucdavis.edu\"> <strong>Maciej Zwieniecki</strong></a> (UC Davis), <a href=\"mailto:zellis@ucdavis.edu\"> <strong>Zac Ellis</strong></a> (UC Davis), <a href=\"mailto:niccolo.tricerri@unito.it\"> <strong>Niccolò Tricerri</strong></a> (UNITO - IUSS Pavia)  </p>", unsafe_allow_html=True)
-
+st.markdown(
+    "<p style='text-align: center; font-size: 20px'>This is a research report founded by <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a>. </p>",
+    unsafe_allow_html=True)
+st.markdown(
+    "<p style='text-align: center;'>For further information contact: <a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Or Sperling</strong></a> (ARO-Volcani), <a href=\"mailto:mzwienie@ucdavis.edu\"> <strong>Maciej Zwieniecki</strong></a> (UC Davis), <a href=\"mailto:zellis@ucdavis.edu\"> <strong>Zac Ellis</strong></a> (UC Davis), <a href=\"mailto:niccolo.tricerri@unito.it\"> <strong>Niccolò Tricerri</strong></a> (UNITO - IUSS Pavia)  </p>",
+    unsafe_allow_html=True)
 
 # 📌 **User Inputs**
 # 🌍 Unit system selection
 
-#st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
-st.sidebar.image("img/Logo.png", caption= "**i**rrigation - **M**onthly **A**nnual **P**lanner")
+# st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
+st.sidebar.image("img/Logo.png", caption="**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
 st.sidebar.header("Farm Data")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
@@ -259,10 +269,8 @@ unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm
 unit_label = "inches" if "Imperial" in unit_system else "mm"
 conversion_factor = 0.03937 if "Imperial" in unit_system else 1
 
-
 # Layout: 2 columns (map | output)
 col2, col1 = st.columns([6, 4])
-#st.markdown("<p style='text-align: center; font-size: 12px; color: gray;'>Long and boring disclaimer on small print at the bottom of the page? Founding by etc.....</p>", unsafe_allow_html=True)
 
 if "map_clicked" not in st.session_state:
     st.session_state.map_clicked = False
@@ -273,21 +281,24 @@ with col1:
     # 🗺️ **Map Selection**
     map_data = display_map()
 
-
     if isinstance(map_data, dict) and (coords := map_data.get("last_clicked")) and {"lat", "lng"} <= coords.keys():
-        st.info("Report updated. Change you parameters or select any new location.")
+        st.info(
+            "Report updated. Change you parameters or select any new location. You can generate and download a pdf report")
 
     else:
         st.info("🖱️ Click a location on the map to begin.")
 
-
 with col2:
     # --- Sliders (trigger irrigation calc only)
     m_winter = st.sidebar.slider(f"Winter Irrigation ({unit_label})", 0, int(round(700 * conversion_factor)), 0,
-                                 step=int(round(20 * conversion_factor)), help="Did you irrigate in winter? If yes, how much?")
-    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1, help="During which months will you irrigate?")
+                                 step=int(round(20 * conversion_factor)),
+                                 help="Did you irrigate in winter? If yes, how much?")
+    irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1,
+                                          help="During which months will you irrigate?")
 
-    irrigation_rate = st.sidebar.slider(f'Irrigation Rate ({unit_label}/hour)', float(.3 * conversion_factor), float(2.8 * conversion_factor), float(1 * conversion_factor), float(.1 * conversion_factor), help="What is your hourly flow rate?")
+    irrigation_rate = st.sidebar.slider(f'Irrigation Rate ({unit_label}/hour)', float(.3 * conversion_factor),
+                                        float(2.8 * conversion_factor), float(1 * conversion_factor),
+                                        float(.1 * conversion_factor), help="What is your hourly flow rate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -325,25 +336,66 @@ with col2:
             if rain is not None and ndvi is not None and et0 is not None:
                 total_rain = rain * conversion_factor
                 m_rain = st.sidebar.slider(f"Fix Rain to Field ({unit_label})", 0, int(round(1000 * conversion_factor)),
-                                           int(total_rain), step=1, disabled=True)
+                                           int(total_rain), step=1, disabled=False,
+                                           help="Do you know a better value? Do you think less water was retained in the soil?")
 
                 # 🔄 Always recalculate irrigation when sliders or location change
-                df_irrigation = calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, 1)
+                df_irrigation = calc_irrigation(ndvi, m_rain / conversion_factor, et0, m_winter, irrigation_months, 1)
 
                 total_irrigation = df_irrigation['irrigation'].sum()
-                m_irrigation = st.sidebar.slider(f"Water Allocation ({unit_label})", 0, int(round(1500 * conversion_factor)),
+                m_irrigation = st.sidebar.slider(f"Water Allocation ({unit_label})", 0,
+                                                 int(round(1500 * conversion_factor)),
                                                  int(total_irrigation), step=int(round(20 * conversion_factor)),
                                                  help="Here's the recommended irrigation. Are you constrained by water availability, or considering extra irrigation for salinity management?")
 
                 irrigation_factor = m_irrigation / total_irrigation
 
                 # ✅ Adjust ET0 in the table
-                df_irrigation = calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_factor)
+                df_irrigation = calc_irrigation(ndvi, m_rain / conversion_factor, et0, m_winter, irrigation_months,
+                                                irrigation_factor)
                 total_irrigation = df_irrigation['irrigation'].sum()
+
+                st.markdown("""
+                <style>
+                .centered-stats {
+                    text-align: center;
+                    font-size: 27px;
+                    font-weight: bold;
+                    margin-top: 15px;
+                }
+
+                .tooltip-icon {
+                  display: inline-block;
+                  width: 17px;
+                  height: 17px;
+                  background-color: #3498db;
+                  color: white;
+                  border-radius: 50%;
+                  text-align: center;
+                  font-size: 12px;
+                  line-height: 16px;
+                  margin-left: 3px;
+                  cursor: help;
+                  vertical-align: middle;
+                }
+                .tooltip-icon::after {
+                  content: "i";
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+                st.markdown(f"""
+                <div class="centered-stats">
+                  <span title="Potential Normalized Difference Vegetation Index — shows vegetation health."> <span class="tooltip-icon"></span> NDVI</span>: {ndvi:.2f} | 
+                  <span title="Potential Total Evapotranspiration for the season"> <span class="tooltip-icon"></span> ET₀</span>: {df_irrigation['ET0'].sum():.0f} {unit_label} | 
+                  <span title="Total amount of water suggested for the season."> <span class="tooltip-icon"></span> Irrigation</span>: {total_irrigation:.0f} {unit_label}
+                </div>
+                """, unsafe_allow_html=True)
 
                 # 📈 Plot
                 fig, ax = plt.subplots()
-                ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='#3897c5', alpha=1, label="Irrigation")
+                ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='#3897c5', alpha=1,
+                       label="Irrigation")
                 ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='#74ac72',
                         label="Soil Water")
                 # Red overlay where SW1 < 0
@@ -354,8 +406,6 @@ with col2:
 
                 ax.set_ylim(bottom=-3.7 * conversion_factor)
 
-                ax.set_title(
-                    f"NDVI: {ndvi:.2f} | ET₀: {df_irrigation['ET0'].sum():.0f} {unit_label} | Irrigation: {total_irrigation:.0f} {unit_label}")
                 ax.set_xlabel("Month")
                 ax.set_ylabel(f"Water amount ({unit_label})")
                 ax.legend()
@@ -364,7 +414,6 @@ with col2:
                 # 📊 Table
                 st.subheader('Weekly Irrigation Updates:')
                 df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
-                df_irrigation['ET0'] = df_irrigation['ET0'] / 4
 
                 # Filter by selected irrigation months
                 start_month, end_month = irrigation_months
@@ -373,7 +422,8 @@ with col2:
                 # Show only monthly ET₀ and irrigation totals
                 filtered_df.index = [''] * len(filtered_df)
 
-                filtered_df['week_irrigation_hours'] = ((filtered_df['week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
+                filtered_df['week_irrigation_hours'] = ((filtered_df[
+                                                             'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
                 st.dataframe(
@@ -387,6 +437,188 @@ with col2:
                     }).round(1),
                     hide_index=True
                 )
+
+
+                # Function to create a PDF report
+                def create_pdf_report(fig, df_irrigation, ndvi, total_irrigation, unit_label, NotesText, lat, lon):
+
+                    pdf = FPDF()
+                    pdf.add_page()
+
+                    pdf.set_font("Arial", 'B', 20)
+                    pdf.cell(0, 10, "ALMOND - iMAP", ln=True, align="L")
+                    pdf.set_font("Arial", 'B', 14)
+                    pdf.cell(0, 9, "irrigation Monthly Annual Planner Report for ALMOND orchards", ln=True, align="L")
+                    pdf.image("img/Logo.png", x=140, y=10, w=80)
+
+                    # Center and zoom
+                    map_center = [lat, lon]
+                    zoom = 14
+
+                    # Create map
+                    n = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
+
+                    # Satellite base layer
+                    folium.TileLayer(
+                        tiles="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                        attr="Esri World Imagery",
+                        name="Satellite",
+                        overlay=False,
+                        control=False
+                    ).add_to(n)
+
+                    folium.Marker(
+                        location=[lat, lon],
+                        popup=f'Coordinates: {lat}, {lon}'
+                    ).add_to(n)
+
+                    pdf.ln(2)
+                    pdf.set_font("Arial", size=13)
+                    # pdf.cell(0, 8, f"NDVI: {ndvi}", ln=True)
+
+                    month_names = pd.to_datetime(irrigation_months, format='%m').month_name()
+                    month_names_str = ' - '.join(month_names)
+                    pdf.cell(0, 8, f"Selected irrigation period: {month_names_str}", ln=True)
+
+                    # pdf.cell(0, 8, f"Total Irrigation: {total_irrigation:.2f} {unit_label}", ln=True)
+                    pdf.cell(0, 8, f"Irrigation rate: {irrigation_rate:.2f} {unit_label}/hour", ln=True)
+
+                    pdf.set_font("Arial", style='I', size=13)
+                    half_width = (pdf.w - 2 * pdf.l_margin) - 50
+
+                    pdf.multi_cell(half_width, 8, f"Notes: {NotesText}")
+
+                    pdf.ln(2)
+                    pdf.cell(0, 8, "Weekly plan:", ln=True)
+
+                    df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
+
+                    # Filter by selected irrigation months
+                    start_month, end_month = irrigation_months
+                    filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
+
+                    # Show only monthly ET₀ and irrigation totals
+                    filtered_df.index = [''] * len(filtered_df)
+
+                    filtered_df['week_irrigation_hours'] = ((filtered_df[
+                                                                 'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
+
+                    filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
+
+                    selected_columns_df = (
+                        filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
+                        .rename(columns={
+                            'month': 'Month',
+                            'ET0': f'ET0 ({unit_label})',
+                            'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
+                            'week_irrigation_hours': f'Irrigation time (hours)',
+                            'alert': 'Alert'
+                        })
+                        .round(1))
+
+                    # Add table headers
+                    headers = selected_columns_df.columns.tolist()
+
+                    # Set custom column widths for each column
+                    column_widths = [25, 35, 56, 48, 28]  # Define a width for each column
+
+                    # Set font for headers
+                    pdf.set_font("Arial", 'B', 12)
+                    for i, header in enumerate(headers):
+                        pdf.cell(column_widths[i], 10, header, border=1, align='C')  # Use the respective column width
+                    pdf.ln()  # Line break after headers
+
+                    # Set font for data rows
+                    pdf.set_font("Arial", '', 12)
+
+                    # Iterate over each row of the filtered DataFrame
+                    for index, row in selected_columns_df.iterrows():
+                        for i, value in enumerate(row):
+                            pdf.cell(column_widths[i], 10, str(value), border=1,
+                                     align='C')  # Use respective width for each column
+                        pdf.ln()  # Line break after each row
+
+                    pdf.ln(3)
+
+                    pdf.set_font("Arial", size=13)
+                    pdf.cell(0, 8,
+                             f"data for Location (lat: {round(lat, 3)} lon: {round(lon, 3)}) - NDVI: {ndvi} - Total Irrigation: {total_irrigation:.2f} {unit_label}",
+                             ln=True, align='C')
+                    pdf.cell(0, 8, f"", ln=True)
+
+                    pdf.ln(3)
+
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+                        fig.savefig(tmpfile.name, format="PNG", bbox_inches='tight')
+                        tmpfile.seek(0)
+                        image_path = tmpfile.name
+
+                    image_width = 100
+                    image_height = 95
+
+                    bottom_margin = pdf.b_margin
+                    y_position = pdf.h - bottom_margin - image_height
+
+                    pdf.image(image_path, x=pdf.l_margin, y=y_position, w=image_width)
+                    os.remove(image_path)
+
+                    image_path = save_map_as_image(n)
+                    image_width = 87
+                    image_height = 93
+                    right_margin = pdf.r_margin
+                    bottom_margin = pdf.b_margin
+
+                    # Calculate X and Y for bottom-right positioning
+                    x_position = pdf.w - right_margin - image_width
+                    y_position = pdf.h - bottom_margin - image_height
+
+                    pdf.image(image_path, x=x_position, y=y_position, w=image_width)
+                    os.remove(image_path)
+
+                    current_date = datetime.now().strftime("%B %d, %Y")
+                    pdf.set_y(-33)
+                    pdf.set_font("Arial", size=11)
+                    pdf.cell(0, 10, current_date, 0, 0, 'L')
+                    pdf.cell(0, 10, "Report based on the work of: Or, Maciej, Zac and Niccolò.", 0, 0, 'R')
+
+                    pdf_bytes = pdf.output(dest="S").encode("latin1")
+                    return pdf_bytes
+
+
+                NotesText = st.text_input("Add your notes for the report:")
+
+                if all(key in st.session_state for key in ["ndvi", "et0"]):
+                    if "pdf_ready" not in st.session_state:
+                        st.session_state["pdf_ready"] = False
+                    if "pdf_downloaded" not in st.session_state:
+                        st.session_state["pdf_downloaded"] = False
+
+                    if st.button("⚙️ Generate PDF Report"):
+                        with st.spinner("🛠️ Generating PDF report..."):
+                            pdf_data = create_pdf_report(
+                                fig, df_irrigation, st.session_state["ndvi"],
+                                total_irrigation, unit_label, NotesText, lat, lon
+                            )
+                            st.session_state["pdf_data"] = pdf_data
+                            st.session_state["pdf_ready"] = True
+                            st.session_state["pdf_downloaded"] = False
+                            st.success("✅ PDF report generated!")
+
+                    # Show download button only if PDF is ready and not yet downloaded
+                    if st.session_state["pdf_ready"] and not st.session_state["pdf_downloaded"]:
+                        # Create a download button that also sets the "downloaded" flag
+                        if st.download_button(
+                                label="📄 Download PDF Report",
+                                data=st.session_state["pdf_data"],
+                                file_name="Irrigation_Report.pdf",
+                                mime="application/pdf"
+                        ):
+                            st.session_state["pdf_downloaded"] = True  # hide button after download
+                else:
+                    st.error("❌ No weather data available to generate the report.")
+
+
+
 
             else:
                 st.error("❌ No weather data found for this location.")
