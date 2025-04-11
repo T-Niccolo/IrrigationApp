@@ -241,7 +241,6 @@ def save_map_as_image(folium_map):
         temp_image_path = tmp_image_file.name
 
     # Set up Selenium WebDriver in headless mode
-    options = Options()
 
     import subprocess
 
@@ -256,7 +255,7 @@ def save_map_as_image(folium_map):
         except Exception as e:
             print(f"Error checking {path}: {e}")
 
-
+    options = Options()
     options.binary_location = "/usr/bin/chromium-browser"  # <<< Corrected
     options.add_argument("--headless=new")  # Modern headless mode
     options.add_argument("--disable-gpu")
