@@ -12,9 +12,16 @@ from google.oauth2 import service_account
 from PIL import Image
 from fpdf import FPDF
 import tempfile
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import os
+import chromedriver_autoinstaller
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+
+# Automatically download and install the correct version of chromedriver
+chromedriver_autoinstaller.install()
+
+
 
 st.set_page_config(layout='wide')
 
