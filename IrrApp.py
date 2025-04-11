@@ -31,8 +31,8 @@ initialize_ee()
 
 st.set_page_config(layout='wide')
 
-ee.Authenticate()
-ee.Initialize()
+#ee.Authenticate()
+#ee.Initialize()
 
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
