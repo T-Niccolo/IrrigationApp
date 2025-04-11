@@ -7,15 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
 import time
-from shapely.geometry import Point
 from google.oauth2 import service_account
-from PIL import Image
 from fpdf import FPDF
-import os
-
 import tempfile
-import asyncio
-from playwright.async_api import async_playwright
+import os
+from staticmap import StaticMap, CircleMarker
+from PIL import Image
 
 st.set_page_config(layout='wide')
 
@@ -214,28 +211,21 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     return df
 
 
-def save_map_as_image(folium_map):
-    # Save the Folium map to a temporary HTML file
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_html_file:
-        temp_html_path = tmp_html_file.name
-        folium_map.save(temp_html_path)
 
-    # Generate a matching temporary image path
-    temp_image_path = temp_html_path.replace(".html", ".png")
+def save_map_as_image_static(lat, lon, zoom=12, size=(600, 400)):
+    # Create static map with a marker
+    m = StaticMap(size[0], size[1])
+    marker = CircleMarker((lon, lat), 'red', 12)
+    m.add_marker(marker)
 
-    # Define the async screenshot logic
-    async def take_screenshot(html_path, image_path):
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page(viewport={"width": 800, "height": 600})
-            await page.goto(f"file://{html_path}")
-            await page.screenshot(path=image_path)
-            await browser.close()
+    image = m.render(zoom=zoom)
 
-    # Run the async part synchronously
-    asyncio.run(take_screenshot(temp_html_path, temp_image_path))
+    # Save to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+        image_path = tmp_file.name
+        image.save(image_path)
 
-    return temp_image_path
+    return image_path
 
 # 🌟 **Streamlit UI**
 st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
@@ -543,7 +533,7 @@ with col2:
                     os.remove(image_path)
 
 
-                    image_path = save_map_as_image(n)
+                    image_path = save_map_as_image_static(lat,lon)
                     image_width = 87
                     image_height = 93
                     right_margin = pdf.r_margin
