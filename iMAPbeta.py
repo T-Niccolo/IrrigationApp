@@ -11,10 +11,11 @@ from shapely.geometry import Point
 from google.oauth2 import service_account
 from PIL import Image
 from fpdf import FPDF
-import tempfile
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 import os
+
+import tempfile
+import asyncio
+from playwright.async_api import async_playwright
 
 st.set_page_config(layout='wide')
 
@@ -214,33 +215,26 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
 
 
 def save_map_as_image(folium_map):
-    # Create a temporary directory to save the HTML map
+    # Save the Folium map to a temporary HTML file
     with tempfile.NamedTemporaryFile(delete=False, suffix='.html') as tmp_html_file:
         temp_html_path = tmp_html_file.name
         folium_map.save(temp_html_path)
 
-    # Create a temporary file for the screenshot
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_image_file:
-        temp_image_path = tmp_image_file.name
+    # Generate a matching temporary image path
+    temp_image_path = temp_html_path.replace(".html", ".png")
 
-    # Set up Selenium WebDriver in headless mode
-    options = Options()
-    options.add_argument("--headless=new")  # Use the newer headless mode if available
-    options.add_argument("--disable-gpu")  # Disable GPU (often recommended for headless)
-    options.add_argument("--no-sandbox")  # Bypass OS security model (helpful in some environments)
-    options.add_argument("--disable-dev-shm-usage")  # Prevent shared memory issues
-    options.headless = True
-    driver = webdriver.Chrome(options=options)
+    # Define the async screenshot logic
+    async def take_screenshot(html_path, image_path):
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            page = await browser.new_page(viewport={"width": 800, "height": 600})
+            await page.goto(f"file://{html_path}")
+            await page.screenshot(path=image_path)
+            await browser.close()
 
-    # Load the saved map
-    driver.get("file:///" + temp_html_path)
-    time.sleep(2)  # Wait for the map to load
+    # Run the async part synchronously
+    asyncio.run(take_screenshot(temp_html_path, temp_image_path))
 
-    # Take a screenshot and save it as PNG
-    driver.save_screenshot(temp_image_path)
-    driver.quit()
-
-    # Return the path to the image
     return temp_image_path
 
 # 🌟 **Streamlit UI**
