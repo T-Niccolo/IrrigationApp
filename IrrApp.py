@@ -594,7 +594,7 @@ with col2:
                         if st.download_button(
                                 label="📄 Download PDF Report",
                                 data=st.session_state["pdf_data"],
-                                file_name="Irrigation_Report.pdf",
+                                file_name="iMAP_Report.pdf",
                                 mime="application/pdf"
                         ):
                             st.session_state["pdf_downloaded"] = True  # hide button after download
