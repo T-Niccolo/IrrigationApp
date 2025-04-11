@@ -431,6 +431,8 @@ with col2:
                                                              'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
+                filtered_df['ET0'] = filtered_df['ET0'] / 4
+
                 st.dataframe(
                     filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
                     .rename(columns={
