@@ -14,6 +14,8 @@ import os
 from PIL import Image
 from io import BytesIO
 from staticmap import StaticMap, IconMarker
+from folium.plugins import Geocoder
+
 
 st.set_page_config(layout='wide')
 
@@ -156,32 +158,15 @@ def display_map():
     # Create map
     m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
 
-    # Satellite base layer
     folium.TileLayer(
-        tiles="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri World Imagery",
-        name="Satellite",
+        tiles='https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+        attr='Map data © Google',
+        name='Google Satellite',
         overlay=False,
-        control=False
+        control=True
     ).add_to(m)
 
-    # Transparent place labels (cities, landmarks)
-    folium.TileLayer(
-        tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri Boundaries & Labels",
-        name="Place Labels",
-        overlay=True,
-        control=False
-    ).add_to(m)
-
-    # Transparent road overlay (includes road numbers!)
-    folium.TileLayer(
-        tiles="https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri Transportation",
-        name="Roads",
-        overlay=True,
-        control=False
-    ).add_to(m)
+    Geocoder(collapsed=False, add_marker=False).add_to(m)
 
     return st_folium(m, height=600, width=900, use_container_width=True)
 
@@ -291,7 +276,7 @@ with col1:
             "Report updated. Change you parameters or select any new location. You can generate and download a pdf report")
 
     else:
-        st.info("🖱️ Click a location on the map to begin.")
+        st.info("🖱️ Click a location on the map to begin. The searchbar can help you find the zone of interest.")
 
 with col2:
     # --- Sliders (trigger irrigation calc only)
@@ -399,21 +384,36 @@ with col2:
 
                 # 📈 Plot
                 fig, ax = plt.subplots()
-                ax.bar(df_irrigation['month'], df_irrigation['irrigation'], color='#3897c5', alpha=1,
-                       label="Irrigation")
-                ax.plot(df_irrigation['month'], df_irrigation['SW1'], marker='o', linestyle='-', color='#74ac72',
-                        label="Soil Water")
-                # Red overlay where SW1 < 0
-                df_below_zero = df_irrigation[df_irrigation['SW1'] <= 0]
-                if not df_below_zero.empty:
-                    ax.plot(df_below_zero['month'], df_below_zero['SW1'], marker='o', linestyle='None', color='#FF4B4B',
-                            label="Drought")
 
+                # Add drought bars (SW1 = 0) only if they exist
+                ax.bar(df_irrigation.loc[df_irrigation['SW1'] > 0, 'month'],
+                       df_irrigation.loc[df_irrigation['SW1'] > 0, 'irrigation'], alpha=1, label="Irrigation")
+
+                if (df_irrigation['SW1'] == 0).any():
+                    ax.bar(df_irrigation.loc[df_irrigation['SW1'] == 0, 'month'],
+                           df_irrigation.loc[df_irrigation['SW1'] == 0, 'irrigation'], alpha=1, label="Drought",
+                           color='#FF4B4B')
+
+                # Add a shaded area for SW1 behind the bars
+                ax.fill_between(
+                    df_irrigation['month'],  # X-axis values (months)
+                    0,  # Start of the shaded area (baseline)
+                    df_irrigation['SW1'],  # End of the shaded area (SW1 values)
+                    color='#74ac72',  # Green color for the shaded area
+                    alpha=0.4,  # Transparency
+                    label="Soil Water"
+                )
+
+                # Iterate through the data to conditionally color the bars
+                bar_colors = ['#FF4B4B' if sw1 == 0 else '#3897c5' for sw1 in df_irrigation['SW1']]
+
+                # Set plot limits and labels
                 ax.set_ylim(bottom=-3.7 * conversion_factor)
-
                 ax.set_xlabel("Month")
                 ax.set_ylabel(f"Water amount ({unit_label})")
                 ax.legend()
+
+                # Display the plot
                 st.pyplot(fig)
 
                 # 📊 Table
