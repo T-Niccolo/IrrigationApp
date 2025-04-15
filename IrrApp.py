@@ -610,6 +610,42 @@ with col2:
             else:
                 st.error("❌ No weather data found for this location.")
         else:
+            st.markdown("""
+            <style>
+            .centered-stats {
+                text-align: center;
+                font-size: 27px;
+                font-weight: bold;
+                margin-top: 15px;
+            }
+
+            .tooltip-icon {
+              display: inline-block;
+              width: 17px;
+              height: 17px;
+              background-color: #3498db;
+              color: white;
+              border-radius: 50%;
+              text-align: center;
+              font-size: 12px;
+              line-height: 16px;
+              margin-left: 3px;
+              cursor: help;
+              vertical-align: middle;
+            }
+            .tooltip-icon::after {
+              content: "i";
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div class="centered-stats">
+              <span title="Potential Normalized Difference Vegetation Index — shows vegetation health."> <span class="tooltip-icon"></span> NDVI</span>: 0.00 | 
+              <span title="Potential Total Evapotranspiration for the season"> <span class="tooltip-icon"></span> ET₀</span>: 00 {unit_label} | 
+              <span title="Total amount of water suggested for the season."> <span class="tooltip-icon"></span> Irrigation</span>: 00 {unit_label}
+            </div>
+            """, unsafe_allow_html=True)
             image = Image.open("img/ExampleGraph.png")  # Assuming "images" folder in your repo
             st.image(image, caption="Example image of the graphical output", use_container_width=True)
 
