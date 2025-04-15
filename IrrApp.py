@@ -410,7 +410,7 @@ with col2:
                 # Set plot limits and labels
                 ax.set_ylim(bottom=-3.7 * conversion_factor)
                 ax.set_xlabel("Month")
-                ax.set_ylabel(f"Water amount ({unit_label})")
+                ax.set_ylabel(f"Water Amount ({unit_label})")
                 ax.legend()
 
                 # Display the plot
