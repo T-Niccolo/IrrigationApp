@@ -423,16 +423,9 @@ with col2:
                 start_month, end_month = irrigation_months
                 filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
-                # Show only monthly ET₀ and irrigation totals
-                filtered_df.index = [''] * len(filtered_df)
-
-                # filtered_df['week_irrigation_hours'] = ((filtered_df[
-                #                                              'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
                 filtered_df[['ET0', 'ETa', 'week_irrigation_volume']] = filtered_df[['ET0', 'ETa', 'irrigation']] / 4
-
-                print(filtered_df)
 
                 st.dataframe(
                     filtered_df[['month', 'ET0', 'ETa', 'week_irrigation_volume', 'alert']]
@@ -467,40 +460,35 @@ with col2:
                     month_names = pd.to_datetime(irrigation_months, format='%m').month_name()
                     month_names_str = ' - '.join(month_names)
                     pdf.cell(0, 8, f"Selected irrigation period: {month_names_str}", ln=True)
+                    pdf.cell(0, 8, f"Seasonal ET0: {df_irrigation['ET0'].sum():.0f} {unit_label}", ln=True)
 
                     # pdf.cell(0, 8, f"Total Irrigation: {total_irrigation:.2f} {unit_label}", ln=True)
-                    pdf.cell(0, 8, f"Irrigation rate: {irrigation_rate:.2f} {unit_label}/hour", ln=True)
+                    # pdf.cell(0, 8, f"Irrigation rate: {irrigation_rate:.2f} {unit_label}/hour", ln=True)
 
                     pdf.set_font("Arial", style='I', size=13)
                     half_width = (pdf.w - 2 * pdf.l_margin) - 50
 
                     pdf.multi_cell(half_width, 8, f"Notes: {NotesText}")
 
-                    pdf.ln(2)
+                    pdf.ln(4)
                     pdf.cell(0, 8, "Weekly plan:", ln=True)
-
-                    df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
 
                     # Filter by selected irrigation months
                     start_month, end_month = irrigation_months
                     filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
-                    # Show only monthly ET₀ and irrigation totals
-                    filtered_df.index = [''] * len(filtered_df)
-
-                    filtered_df['week_irrigation_hours'] = ((filtered_df[
-                                                                 'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
-
+                    
                     filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
-                    filtered_df['ET0'] = filtered_df['ET0'] / 4
+                    filtered_df[['ET0', 'ETa', 'week_irrigation_volume']] = filtered_df[['ET0', 'ETa', 'irrigation']] / 4
 
                     selected_columns_df = (
-                        filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
+                        filtered_df[['month', 'ET0', 'ETa', 'week_irrigation_volume', 'alert']]
                         .rename(columns={
                             'month': 'Month',
                             'ET0': f'ET0 ({unit_label})',
+                            'ETa': f'ETa ({unit_label})',
                             'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
-                            'week_irrigation_hours': f'Irrigation time (hours)',
+                            # 'week_irrigation_hours': f'Irrigation time (hours)',
                             'alert': 'Alert'
                         })
                         .round(1))
@@ -509,7 +497,7 @@ with col2:
                     headers = selected_columns_df.columns.tolist()
 
                     # Set custom column widths for each column
-                    column_widths = [25, 35, 56, 48, 28]  # Define a width for each column
+                    column_widths = [25, 35, 35, 55, 28]  # Define a width for each column
 
                     # Set font for headers
                     pdf.set_font("Arial", 'B', 12)
