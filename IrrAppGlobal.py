@@ -15,6 +15,7 @@ from PIL import Image
 from io import BytesIO
 from staticmap import StaticMap, IconMarker
 from folium.plugins import Geocoder
+import openmeteo_requests
 
 st.set_page_config(layout='wide')
 
@@ -28,9 +29,9 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+# initialize_ee()
 
-# ee.Initialize(project="ee-orsperling")
+ee.Initialize(project="ee-orsperling")
 # ee.Authenticate()
 
 
@@ -55,91 +56,85 @@ def get_ndvi(lat, lon):
 
 
 @st.cache_data(show_spinner=False)
-def get_rain_era5(lat, lon):
-    # Define date range
-    today = datetime.now()
-    start_year = today.year if today.month >= 11 else today.year - 1
-    start = f"{start_year}-11-01"
-    end = today.strftime("%Y-%m-%d")
+def get_rain(lat, lon):
+    # Determine start date: Nov 1 of this or last year
+    today = datetime.today()
+    start_year = today.year - 1 if today.month < 11 else today.year
+    start_date = f"{start_year}-11-01"
 
-    # Define location
-    point = ee.Geometry.Point(lon, lat)
+    # Build API URL
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": today.strftime("%Y-%m-%d"),
+        "daily": "rain_sum",
+        "timezone": "auto"
+    }
 
-    # Get total precipitation image
-    rain_sum = ee.ImageCollection("OREGONSTATE/PRISM/AN81d") \
-        .filterDate(start, end) \
-        .select("ppt") \
-        .sum()
+    # Fetch and parse data
+    openmeteo = openmeteo_requests.Client()
+    responses = openmeteo.weather_api(url, params=params)
+    response = responses[0]
 
-    # Reduce to value at point
-    try:
-        rain_mm = rain_sum.reduceRegion(
-            reducer=ee.Reducer.first(),
-            geometry=point,
-            scale=4638.3
-        ).get("ppt").getInfo()
+    # Extract rain and time values
+    time = response.Daily().Time()
+    rain = response.Daily().Variables(0).ValuesAsNumpy()
 
-        return rain_mm  # Convert meters to mm
-    except Exception:
-        return None
+    # Build DataFrame
+    df = pd.DataFrame({"time": pd.to_datetime(time), "rain": rain})
+
+    # Return total rainfall
+    return round(df["rain"].sum(skipna=True), 1)
 
 
 @st.cache_data(show_spinner=False)
-def get_et0_gridmet(lat, lon):
-    today = datetime.now()
-    start_date = datetime(today.year - 5, 1, 1)
-    end_date = datetime(today.year - 1, 12, 31)
+def get_et0(lat, lon):
+    today = datetime.today()
+    start_date = f"{today.year - 5}-01-01"
+    end_date = f"{today.year - 1}-12-31"
 
-    point = ee.Geometry.Point(lon, lat)
+    url = "https://archive-api.open-meteo.com/v1/archive"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": end_date,
+        "daily": "et0_fao_evapotranspiration",
+        "timezone": "auto"
+    }
 
-    # Start and end as ee.Date
-    start = ee.Date(start_date.strftime("%Y-%m-%d"))
-    end = ee.Date(end_date.strftime("%Y-%m-%d"))
+    openmeteo = openmeteo_requests.Client()
+    responses = openmeteo.weather_api(url, params=params)
+    response = responses[0]
 
-    # Create monthly steps (5 full years = 60 months)
-    month_count = end.difference(start, 'month')
-    months = ee.List.sequence(0, month_count.subtract(1))
+    # Build dataframe
 
-    def monthly_sum(n):
-        start_month = start.advance(n, 'month')
-        end_month = start_month.advance(1, 'month')
-        monthly_img = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET") \
-            .filterDate(start_month, end_month) \
-            .select("eto") \
-            .sum()
+    daily=response.Daily()
+    
+    time = pd.date_range(
+        start = pd.to_datetime(daily.Time(), unit = "s", utc = True),
+        end = pd.to_datetime(daily.TimeEnd(), unit = "s", utc = True),
+        freq = pd.Timedelta(seconds = daily.Interval()),
+        inclusive = "left"
+    )
 
-        value = monthly_img.reduceRegion(
-            reducer=ee.Reducer.first(),
-            geometry=point,
-            scale=4000
-        ).get("eto")
+    et0 = response.Daily().Variables(0).ValuesAsNumpy()
 
-        return ee.Feature(None, {
-            "month": start_month.format("M"),
-            "year": start_month.format("Y"),
-            "et0": value
-        })
+    # Build DataFrame
+    df = pd.DataFrame({"time": time, "et0": et0})
 
-    # Map and fetch features
-    fc = ee.FeatureCollection(months.map(monthly_sum))
+    df["year"] = df["time"].dt.year
+    df["month"] = df["time"].dt.month
+    
+    # Step 1: sum ET₀ per (year, month)
+    monthly_sums = df.groupby(["year", "month"])["et0"].sum().reset_index()
 
-    try:
-        features = fc.getInfo()["features"]
-        data = [{"month": int(f["properties"]["month"]),
-                 "year": int(f["properties"]["year"]),
-                 "et0": f["properties"]["et0"]} for f in features]
-    except Exception:
-        return None
+    # Step 2: average monthly sums across years
+    avg_monthly_et0 = monthly_sums.groupby("month")["et0"].mean().reset_index()
+    avg_monthly_et0["et0"] = avg_monthly_et0["et0"] * 1.1
 
-    df = pd.DataFrame(data)
-    df["et0"] = pd.to_numeric(df["et0"], errors="coerce")
-    df = df.dropna()
-
-    if df.empty:
-        return None
-
-    # Average ET0 per calendar month over the years
-    avg_monthly_et0 = df.groupby("month")["et0"].mean().reset_index()
     avg_monthly_et0.rename(columns={"et0": "ET0"}, inplace=True)
 
     return avg_monthly_et0
@@ -151,8 +146,8 @@ def get_et0_gridmet(lat, lon):
 # 🌍 Interactive Map for Coordinate Selection
 def display_map():
     # Center and zoom
-    map_center = [35.26, -119.15]
-    zoom = 12
+    map_center = [32.76558726677407, 35.75073837793036]
+    zoom = 14
 
     # Create map
     m = folium.Map(location=map_center, zoom_start=zoom, tiles=None)
@@ -253,7 +248,7 @@ st.markdown(
 st.sidebar.image("img/Logo.png", caption="**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
 st.sidebar.header("Farm Data")
-unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
+unit_system = st.sidebar.radio("Select Units", ["Metric (mm)", "Imperial (inches)"], help='What measures do you use?')
 
 unit_label = "inches" if "Imperial" in unit_system else "mm"
 conversion_factor = 0.03937 if "Imperial" in unit_system else 1
@@ -314,8 +309,8 @@ with col2:
                 st.session_state["last_location_time"] = now
 
                 # Fetch and store weather data
-                st.session_state["et0"] = get_et0_gridmet(lat, lon)
-                st.session_state["rain"] = get_rain_era5(lat, lon)
+                st.session_state["et0"] = get_et0(lat, lon)
+                st.session_state["rain"] = get_rain(lat, lon)
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
 
             # Retrieve stored values
