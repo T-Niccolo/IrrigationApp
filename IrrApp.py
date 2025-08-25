@@ -31,7 +31,7 @@ def initialize_ee():
 
 initialize_ee()
 
-#ee.Initialize()
+#ee.Initialize(project = "ee-niccolotricerri")
 #ee.Authenticate()
 
 
@@ -165,6 +165,8 @@ def display_map():
         overlay=False,
         control=True
     ).add_to(m)
+
+    m.add_child(folium.LatLngPopup())
 
     Geocoder(collapsed=False, add_marker=False).add_to(m)
 
