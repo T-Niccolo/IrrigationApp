@@ -16,6 +16,7 @@ from io import BytesIO
 from staticmap import StaticMap, IconMarker
 from folium.plugins import Geocoder
 
+
 st.set_page_config(layout='wide')
 
 # Function to initialize Earth Engine with credentials
@@ -28,9 +29,9 @@ def initialize_ee():
     # Initialize Earth Engine
     ee.Initialize(credentials)
 
-initialize_ee()
+# initialize_ee()
 
-# ee.Initialize(project="ee-orsperling")
+ee.Initialize(project="ee-orsperling")
 # ee.Authenticate()
 
 
@@ -184,13 +185,13 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     df.loc[~df['month'].isin(range(3, 11)), 'ET0'] = 0  # Zero ET0 for non-growing months
     df['ET0'] *= conversion_factor * 0.8  # Convert ET0 to inches with 90% efficiency
 
-    # Adjust ETa based on NDVI
-    df['ETa'] = df['ET0'] * NDVI / 0.7
+    # Adjust ET1 based on NDVI
+    df['ET1'] = df['ET0'] * NDVI / 0.7
 
     # # Soil water balance
-    SWI = (rain1 - df.loc[~df['month'].isin(mnts), 'ETa'].sum() - 50 * conversion_factor) / len(mnts)
+    SWI = (rain1 - df.loc[~df['month'].isin(mnts), 'ET1'].sum() - 50 * conversion_factor) / len(mnts)
 
-    df.loc[df['month'].isin(mnts), 'irrigation'] = df['ETa'] - SWI
+    df.loc[df['month'].isin(mnts), 'irrigation'] = df['ET1'] - SWI
     df['irrigation'] = df['irrigation'].clip(lower=0)
     df['irrigation'] = df['irrigation'].fillna(0)
     df["irrigation"] *= irrigation_factor
@@ -199,7 +200,7 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     df.loc[df['month'] == 7, 'irrigation'] *= 0.8
     df.loc[df['month'].isin([8, 9]), 'irrigation'] += vst.values[0] if not vst.empty else 0
 
-    df['SW1'] = (rain1 - df['ETa'].cumsum() + df['irrigation'].cumsum()).clip(lower=0)
+    df['SW1'] = (rain1 - df['ET1'].cumsum() + df['irrigation'].cumsum()).clip(lower=0)
 
     df['alert'] = np.where(df['SW1'] == 0, 'drought', 'safe')
 
@@ -282,13 +283,12 @@ with col2:
     m_winter = st.sidebar.slider(f"Winter Irrigation ({unit_label})", 0, int(round(700 * conversion_factor)), 0,
                                  step=int(round(20 * conversion_factor)),
                                  help="Did you irrigate in winter? If yes, how much?")
-                                 
     irrigation_months = st.sidebar.slider("Irrigation Months", 1, 12, (datetime.now().month + 1, 10), step=1,
                                           help="During which months will you irrigate?")
 
-    # irrigation_rate = st.sidebar.slider(f'Irrigation Rate ({unit_label}/hour)', float(.3 * conversion_factor),
-    #                                     float(2.8 * conversion_factor), float(1 * conversion_factor),
-    #                                     float(.1 * conversion_factor), help="What is your hourly flow rate?")
+    irrigation_rate = st.sidebar.slider(f'Irrigation Rate ({unit_label}/hour)', float(.3 * conversion_factor),
+                                        float(2.8 * conversion_factor), float(1 * conversion_factor),
+                                        float(.1 * conversion_factor), help="What is your hourly flow rate?")
 
     # --- Handle map click
     if map_data and isinstance(map_data, dict) and "last_clicked" in map_data:
@@ -341,7 +341,8 @@ with col2:
                 irrigation_factor = m_irrigation / total_irrigation
 
                 # ✅ Adjust ET0 in the table
-                df_irrigation = calc_irrigation(ndvi, m_rain / conversion_factor, et0, m_winter, irrigation_months, irrigation_factor)
+                df_irrigation = calc_irrigation(ndvi, m_rain / conversion_factor, et0, m_winter, irrigation_months,
+                                                irrigation_factor)
                 total_irrigation = df_irrigation['irrigation'].sum()
 
                 st.markdown("""
@@ -382,7 +383,6 @@ with col2:
                 """, unsafe_allow_html=True)
 
                 # 📈 Plot
-                st.subheader('Monthly Illustration:')
                 fig, ax = plt.subplots()
 
                 # Add drought bars (SW1 = 0) only if they exist
@@ -417,24 +417,29 @@ with col2:
                 st.pyplot(fig)
 
                 # 📊 Table
-                st.subheader('Weekly Recommendations:')
-                
+                st.subheader('Weekly Irrigation Updates:')
+                df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
+
                 # Filter by selected irrigation months
                 start_month, end_month = irrigation_months
                 filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
+                # Show only monthly ET₀ and irrigation totals
+                filtered_df.index = [''] * len(filtered_df)
+
+                filtered_df['week_irrigation_hours'] = ((filtered_df[
+                                                             'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
 
                 filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
-                filtered_df[['ET0', 'ETa', 'week_irrigation_volume']] = filtered_df[['ET0', 'ETa', 'irrigation']] / 4
+                filtered_df['ET0'] = filtered_df['ET0'] / 4
 
                 st.dataframe(
-                    filtered_df[['month', 'ET0', 'ETa', 'week_irrigation_volume', 'alert']]
+                    filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
                     .rename(columns={
                         'month': 'Month',
                         'ET0': f'ET₀ ({unit_label})',
-                        'ETa': f'ETa ({unit_label})',
                         'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
-                        # 'week_irrigation_hours': f'Irrigation time (hours)',
+                        'week_irrigation_hours': f'Irrigation time (hours)',
                         'alert': 'Alert'
                     }).round(1),
                     hide_index=True
@@ -460,35 +465,40 @@ with col2:
                     month_names = pd.to_datetime(irrigation_months, format='%m').month_name()
                     month_names_str = ' - '.join(month_names)
                     pdf.cell(0, 8, f"Selected irrigation period: {month_names_str}", ln=True)
-                    pdf.cell(0, 8, f"Seasonal ET0: {df_irrigation['ET0'].sum():.0f} {unit_label}", ln=True)
 
                     # pdf.cell(0, 8, f"Total Irrigation: {total_irrigation:.2f} {unit_label}", ln=True)
-                    # pdf.cell(0, 8, f"Irrigation rate: {irrigation_rate:.2f} {unit_label}/hour", ln=True)
+                    pdf.cell(0, 8, f"Irrigation rate: {irrigation_rate:.2f} {unit_label}/hour", ln=True)
 
                     pdf.set_font("Arial", style='I', size=13)
                     half_width = (pdf.w - 2 * pdf.l_margin) - 50
 
                     pdf.multi_cell(half_width, 8, f"Notes: {NotesText}")
 
-                    pdf.ln(4)
+                    pdf.ln(2)
                     pdf.cell(0, 8, "Weekly plan:", ln=True)
+
+                    df_irrigation['week_irrigation_volume'] = df_irrigation['irrigation'] / 4
 
                     # Filter by selected irrigation months
                     start_month, end_month = irrigation_months
                     filtered_df = df_irrigation[df_irrigation['month'].between(start_month, end_month)]
 
-                    
+                    # Show only monthly ET₀ and irrigation totals
+                    filtered_df.index = [''] * len(filtered_df)
+
+                    filtered_df['week_irrigation_hours'] = ((filtered_df[
+                                                                 'week_irrigation_volume'] / irrigation_rate) / .5).round() * .5
+
                     filtered_df['month'] = pd.to_datetime(filtered_df['month'], format='%m').dt.month_name()
-                    filtered_df[['ET0', 'ETa', 'week_irrigation_volume']] = filtered_df[['ET0', 'ETa', 'irrigation']] / 4
+                    filtered_df['ET0'] = filtered_df['ET0'] / 4
 
                     selected_columns_df = (
-                        filtered_df[['month', 'ET0', 'ETa', 'week_irrigation_volume', 'alert']]
+                        filtered_df[['month', 'ET0', 'week_irrigation_volume', 'week_irrigation_hours', 'alert']]
                         .rename(columns={
                             'month': 'Month',
                             'ET0': f'ET0 ({unit_label})',
-                            'ETa': f'ETa ({unit_label})',
                             'week_irrigation_volume': f'Irrigation Volume ({unit_label})',
-                            # 'week_irrigation_hours': f'Irrigation time (hours)',
+                            'week_irrigation_hours': f'Irrigation time (hours)',
                             'alert': 'Alert'
                         })
                         .round(1))
@@ -497,7 +507,7 @@ with col2:
                     headers = selected_columns_df.columns.tolist()
 
                     # Set custom column widths for each column
-                    column_widths = [25, 35, 35, 55, 28]  # Define a width for each column
+                    column_widths = [25, 35, 56, 48, 28]  # Define a width for each column
 
                     # Set font for headers
                     pdf.set_font("Arial", 'B', 12)
