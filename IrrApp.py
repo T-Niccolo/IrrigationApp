@@ -30,9 +30,8 @@ def initialize_ee():
 
 initialize_ee()
 
-# ee.Initialize(project="ee-orsperling")
+# ee.Initialize(project="rsc-gwab-lzp")
 # ee.Authenticate()
-
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
 @st.cache_data(show_spinner=False)
@@ -55,18 +54,18 @@ def get_ndvi(lat, lon):
 
 
 @st.cache_data(show_spinner=False)
-def get_rain_era5(lat, lon):
+def get_rain_prism(lat, lon):
     # Define date range
-    today = datetime.now()
-    start_year = today.year if today.month >= 11 else today.year - 1
+    today = datetime.today()
+    start_year = today.year - 1 #if today.month < 11 else today.year
     start = f"{start_year}-11-01"
-    end = today.strftime("%Y-%m-%d")
+    end = f"{today.year}-04-01"
 
     # Define location
     point = ee.Geometry.Point(lon, lat)
 
     # Get total precipitation image
-    rain_sum = ee.ImageCollection("OREGONSTATE/PRISM/AN81d") \
+    rain_sum = ee.ImageCollection("OREGONSTATE/PRISM/ANd") \
         .filterDate(start, end) \
         .select("ppt") \
         .sum()
@@ -82,7 +81,7 @@ def get_rain_era5(lat, lon):
         return rain_mm  # Convert meters to mm
     except Exception:
         return None
-
+      
 
 @st.cache_data(show_spinner=False)
 def get_et0_gridmet(lat, lon):
@@ -317,7 +316,7 @@ with col2:
 
                 # Fetch and store weather data
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
-                st.session_state["rain"] = get_rain_era5(lat, lon)
+                st.session_state["rain"] = get_rain_prism(lat, lon)
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
 
             # Retrieve stored values
