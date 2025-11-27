@@ -239,7 +239,7 @@ def save_map_as_image_static(lat, lon, zoom=15, size=(600, 450), marker_path='im
 
 
 # 🌟 **Streamlit UI**
-st.markdown("<h1 style='text-align: center;'>ALMOND - irrigation Monthly Annual Planner</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>G-WaB: Geographic Water Budget</h1>", unsafe_allow_html=True)
 st.markdown(
     "<p style='text-align: center; font-size: 20px'>This is a research report founded by <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a>. </p>",
     unsafe_allow_html=True)
@@ -251,7 +251,7 @@ st.markdown(
 # 🌍 Unit system selection
 
 # st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
-st.sidebar.image("img/Marker.png", caption="G-WaB: Geographic Water Budget")
+st.sidebar.image("img/Marker.png")
 
 st.sidebar.header("Farm Data")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
@@ -451,7 +451,7 @@ with col2:
                     pdf.set_font("Arial", 'B', 20)
                     pdf.cell(0, 10, "ALMOND - iMAP", ln=True, align="L")
                     pdf.set_font("Arial", 'B', 14)
-                    pdf.cell(0, 9, "irrigation Monthly Annual Planner Report for ALMOND orchards", ln=True, align="L")
+                    pdf.cell(0, 9, "G-WaB: Geographic Water Budget", ln=True, align="L")
                     pdf.image("img/Marker.png", x=137, y=10, w=80)
 
                     pdf.ln(2)
