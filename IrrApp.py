@@ -251,7 +251,7 @@ st.markdown(
 # 🌍 Unit system selection
 
 # st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
-st.sidebar.image("img/Marker.png", caption="G-WaB: Geographic Water Budget")
+st.sidebar.image("img/Marker.png", caption="G-WaB: Geographic W**a**ter Budget")
 
 st.sidebar.header("Farm Data")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
