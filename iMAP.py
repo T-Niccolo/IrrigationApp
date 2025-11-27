@@ -27,7 +27,7 @@ def initialize_ee():
         scopes=["https://www.googleapis.com/auth/earthengine"]
     )
     # Initialize Earth Engine
-    ee.Initialize(credentials, project="ee-niccolotricerri")
+    ee.Initialize(credentials)
 
 initialize_ee()
 
