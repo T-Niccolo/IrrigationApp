@@ -80,7 +80,7 @@ def get_rain_prism(lat, lon):
 
         return rain_mm  # Convert meters to mm
     except Exception:
-        return None
+        return 200
       
 
 @st.cache_data(show_spinner=False)
