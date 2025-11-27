@@ -252,7 +252,7 @@ st.markdown(
 # 🌍 Unit system selection
 
 # st.sidebar.caption('This is a research report. For further information contact **Or Sperling** (orsp@volcani.agri.gov.il; ARO-Volcani), **Maciej Zwieniecki** (mzwienie@ucdavis.edu; UC Davis), or **Niccolo Tricerri** (niccolo.tricerri@unito.it; University of Turin).')
-st.sidebar.image("img/Logo.png", caption="**i**rrigation - **M**onthly **A**nnual **P**lanner")
+st.sidebar.image("img/Marker.png", caption="**i**rrigation - **M**onthly **A**nnual **P**lanner")
 
 st.sidebar.header("Farm Data")
 unit_system = st.sidebar.radio("Select Units", ["Imperial (inches)", "Metric (mm)"], help='What measures do you use?')
