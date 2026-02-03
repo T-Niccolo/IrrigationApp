@@ -177,7 +177,7 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     rain1 = rain * conversion_factor + m_winter
 
     # if NDVI < 0.67: NDVI *= 1.05
-    NDVI = 0.8 * (1 - np.exp(-3 * ndvi))
+    NDVI = 0.8 * (1 - np.exp(-3.5 * ndvi))
 
     mnts = list(range(irrigation_months[0], irrigation_months[1] + 1))
 
@@ -378,7 +378,7 @@ with col2:
                 st.markdown(f"""
                 <div class="centered-stats">
                   <span title="Potential Normalized Difference Vegetation Index — shows vegetation health."> <span class="tooltip-icon"></span> NDVI</span>: {ndvi:.2f} | 
-                  <span title="Projected NDVI - shows field growth potential."> <span class="tooltip-icon"></span> pNDVI</span>: {0.8 * (1 - np.exp(-3 * ndvi)):.2f} | 
+                  <span title="Projected NDVI - shows field growth potential."> <span class="tooltip-icon"></span> pNDVI</span>: {0.8 * (1 - np.exp(-3.5 * ndvi)):.2f} | 
                   <span title="Potential Total Evapotranspiration for the season"> <span class="tooltip-icon"></span> ET₀</span>: {df_irrigation['ET0'].sum():.0f} {unit_label} | 
                   <span title="Total amount of water suggested for the season."> <span class="tooltip-icon"></span> Irrigation</span>: {total_irrigation:.0f} {unit_label}
                 </div>
