@@ -52,7 +52,6 @@ def get_ndvi(lat, lon):
     except Exception as e:
         return None
 
-
 @st.cache_data(show_spinner=False)
 def get_rain_prism(lat, lon):
     # Define date range
@@ -82,7 +81,6 @@ def get_rain_prism(lat, lon):
     except Exception:
         return None
       
-
 @st.cache_data(show_spinner=False)
 def get_et0_gridmet(lat, lon):
     today = datetime.now()
@@ -175,10 +173,11 @@ def display_map():
 def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_factor):
     df = et0.copy()
 
-    NDVI = ndvi
+    # NDVI = ndvi
     rain1 = rain * conversion_factor + m_winter
 
-    if NDVI < 0.67: NDVI *= 1.05
+    # if NDVI < 0.67: NDVI *= 1.05
+    NDVI = 0.8 * (1 - np.exp(-3 * ndvi))
 
     mnts = list(range(irrigation_months[0], irrigation_months[1] + 1))
 
@@ -239,10 +238,10 @@ def save_map_as_image_static(lat, lon, zoom=15, size=(600, 450), marker_path='im
 
 
 # 🌟 **Streamlit UI**
-st.markdown("<h1 style='text-align: center;'>G-WaB: Geographic Water Budget</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>GWaB: Geographic Water Budget</h1>", unsafe_allow_html=True)
 st.markdown(
     "<p style='text-align: center; font-size: 20px'>A <a href=\"https://www.bard-isus.org/\"> <strong>BARD</strong></a> research report by: </p>"
-    "<p style='text-align: center;'><a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Orr Sperling</strong></a> (ARO-Volcani), "
+    "<p style='text-align: center;'><a href=\"mailto:orsp@volcani.agri.gov.il\"> <strong>Or Sperling</strong></a> (ARO-Volcani), "
     "<a href=\"mailto:mzwienie@ucdavis.edu\"> <strong>Maciej Zwieniecki</strong></a> (UC Davis), "
     "<a href=\"mailto:zellis@ucdavis.edu\"> <strong>Zac Ellis</strong></a> (UC Davis), "
     "and <a href=\"mailto:niccolo.tricerri@unito.it\"> <strong>Niccolò Tricerri</strong></a> (UNITO - IUSS Pavia)  </p>",
