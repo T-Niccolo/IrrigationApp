@@ -324,7 +324,7 @@ with col2:
                 # Fetch and store weather data
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
 
-                rain, latest_rain = get_rain_prism(lat, lon)
+                rain, latest_date = get_rain_prism(lat, lon)
                 st.session_state["rain"] = rain
 
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
