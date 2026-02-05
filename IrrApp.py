@@ -30,7 +30,7 @@ def initialize_ee():
 
 initialize_ee()
 
-ee.Initialize(project="rsc-gwab-lzp")
+# ee.Initialize(project="rsc-gwab-lzp")
 # ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
