@@ -55,7 +55,10 @@ def get_ndvi(lat, lon):
 @st.cache_data(show_spinner=False)
 def get_rain_prism(lat, lon):
     # Define date range
-    today = datetime.today()
+    today = datetime.now()
+    if today.month < 2:
+        today = today.replace(year=today.year - 1)
+
     start_year = today.year - 1 #if today.month < 11 else today.year
     start = f"{start_year}-11-01"
     end = f"{today.year}-04-01"
@@ -77,7 +80,10 @@ def get_rain_prism(lat, lon):
             scale=4638.3
         ).get("ppt").getInfo()
 
-        return rain_mm  # Convert meters to mm
+        latest_image = rain_sum.sort('system:time_start', False).first()
+        latest_date = ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo() if latest_image.getInfo() else None
+
+        return rain_mm, latest_date  # Convert meters to mm
     except Exception:
         return None
       
@@ -317,7 +323,10 @@ with col2:
 
                 # Fetch and store weather data
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
+
+                rain, latest_rain = get_rain_prism(lat, lon)
                 st.session_state["rain"] = get_rain_prism(lat, lon)
+
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
 
             # Retrieve stored values
@@ -380,6 +389,7 @@ with col2:
                   <span title="Potential Normalized Difference Vegetation Index — shows vegetation health."> <span class="tooltip-icon"></span> NDVI</span>: {ndvi:.2f} | 
                   <span title="Projected NDVI - shows field growth potential."> <span class="tooltip-icon"></span> pNDVI</span>: {0.8 * (1 - np.exp(-3.5 * ndvi)):.2f} | 
                   <span title="Potential Total Evapotranspiration for the season"> <span class="tooltip-icon"></span> ET₀</span>: {df_irrigation['ET0'].sum():.0f} {unit_label} | 
+                  <span title="Last record"> <span class="tooltip-icon"></span> Last rain</span>: {latest_rain} | 
                   <span title="Total amount of water suggested for the season."> <span class="tooltip-icon"></span> Irrigation</span>: {total_irrigation:.0f} {unit_label}
                 </div>
                 """, unsafe_allow_html=True)
