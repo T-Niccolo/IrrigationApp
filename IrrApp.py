@@ -26,11 +26,11 @@ def initialize_ee():
         scopes=["https://www.googleapis.com/auth/earthengine"]
     )
     # Initialize Earth Engine
-    ee.Initialize(credentials)
+    # ee.Initialize(credentials)
 
 initialize_ee()
 
-# ee.Initialize(project="rsc-gwab-lzp")
+ee.Initialize(project="rsc-gwab-lzp")
 # ee.Authenticate()
 
 # 🌍 Function to Fetch NDVI from Google Earth Engine
@@ -80,10 +80,10 @@ def get_rain_prism(lat, lon):
             scale=4638.3
         ).get("ppt").getInfo()
 
-        latest_image = rain_sum.sort('system:time_start', False).first()
-        latest_date = today#ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo() if latest_image.getInfo() else None
+        # latest_image = rain_sum.sort('system:time_start', False).first()
+        # latest_date = today#ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo() if latest_image.getInfo() else None
         
-        return rain_mm, latest_date  # Convert meters to mm
+        return rain_mm#, latest_date  # Convert meters to mm
     except Exception:
         return None
       
@@ -324,8 +324,8 @@ with col2:
                 # Fetch and store weather data
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
 
-                rain, latest_date = get_rain_prism(lat, lon)
-                st.session_state["rain"] = rain
+                # rain, latest_date = get_rain_prism(lat, lon)
+                st.session_state["rain"] = get_rain_prism(lat, lon)
 
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
 
@@ -389,7 +389,6 @@ with col2:
                   <span title="Potential Normalized Difference Vegetation Index — shows vegetation health."> <span class="tooltip-icon"></span> NDVI</span>: {ndvi:.2f} | 
                   <span title="Projected NDVI - shows field growth potential."> <span class="tooltip-icon"></span> pNDVI</span>: {0.8 * (1 - np.exp(-3.5 * ndvi)):.2f} | 
                   <span title="Potential Total Evapotranspiration for the season"> <span class="tooltip-icon"></span> ET₀</span>: {df_irrigation['ET0'].sum():.0f} {unit_label} | 
-                  <span title="Last record"> <span class="tooltip-icon"></span> Last rain</span>: {latest_rain} | 
                   <span title="Total amount of water suggested for the season."> <span class="tooltip-icon"></span> Irrigation</span>: {total_irrigation:.0f} {unit_label}
                 </div>
                 """, unsafe_allow_html=True)
