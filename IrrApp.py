@@ -66,11 +66,13 @@ def get_rain_prism(lat, lon):
     # Define location
     point = ee.Geometry.Point(lon, lat)
 
-    # Get total precipitation image
-    rain_sum = ee.ImageCollection("OREGONSTATE/PRISM/ANd") \
+    # Build precipitation collection
+    rain_coll = ee.ImageCollection("OREGONSTATE/PRISM/ANd") \
         .filterDate(start, end) \
-        .select("ppt") \
-        .sum()
+        .select("ppt")
+
+    # Get total precipitation image
+    rain_sum = rain_coll.sum()
 
     # Reduce to value at point
     try:
@@ -80,10 +82,14 @@ def get_rain_prism(lat, lon):
             scale=4638.3
         ).get("ppt").getInfo()
 
-        # latest_image = rain_sum.sort('system:time_start', False).first()
-        # latest_date = today#ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo() if latest_image.getInfo() else None
+        latest_image = rain_coll.sort('system:time_start', False).first()
+        latest_date = (
+            ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo()
+            if latest_image.getInfo()
+            else None
+        )
         
-        return rain_mm#, latest_date  # Convert meters to mm
+        return rain_mm, latest_date
     except Exception:
         return None
       
@@ -180,7 +186,9 @@ def calc_irrigation(ndvi, rain, et0, m_winter, irrigation_months, irrigation_fac
     df = et0.copy()
 
     # NDVI = ndvi
-    rain1 = rain * conversion_factor + m_winter
+    rain1 = rain * .75 * conversion_factor + m_winter
+    
+    if rain1 > 350 * conversion_factor: rain1 = 350 * conversion_factor
 
     # if NDVI < 0.67: NDVI *= 1.05
     NDVI = 0.8 * (1 - np.exp(-3.5 * ndvi))
@@ -324,8 +332,9 @@ with col2:
                 # Fetch and store weather data
                 st.session_state["et0"] = get_et0_gridmet(lat, lon)
 
-                # rain, latest_date = get_rain_prism(lat, lon)
-                st.session_state["rain"] = get_rain_prism(lat, lon)
+                rain, latest_date = get_rain_prism(lat, lon)
+                st.session_state["rain"] = rain #get_rain_prism(lat, lon)
+                st.session_state["latest_date"] = latest_date
 
                 st.session_state["ndvi"] = get_ndvi(lat, lon)
 
@@ -333,12 +342,13 @@ with col2:
             rain = st.session_state.get("rain")
             ndvi = st.session_state.get("ndvi")
             et0 = st.session_state.get("et0")
+            latest_date = st.session_state.get("latest_date")   
 
             if rain is not None and ndvi is not None and et0 is not None:
                 total_rain = rain * conversion_factor
                 m_rain = st.sidebar.slider(f"Fix Rain to Field ({unit_label})", 0, int(round(1000 * conversion_factor)),
                                            int(total_rain), step=1, disabled=False,
-                                           help="Do you know a better value? Do you think less water was retained in the soil?")
+                                           help=f"Rain until {latest_date}. Are there updates?")
 
                 # 🔄 Always recalculate irrigation when sliders or location change
                 df_irrigation = calc_irrigation(ndvi, m_rain / conversion_factor, et0, m_winter, irrigation_months, 1)
