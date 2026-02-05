@@ -25,7 +25,7 @@ def initialize_ee():
         st.secrets["gcp_service_account"],
         scopes=["https://www.googleapis.com/auth/earthengine"]
     )
-    # Initialize Earth Engine
+    # Initialize Earth Engine with the credentials
     ee.Initialize(credentials)
 
 initialize_ee()
