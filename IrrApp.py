@@ -82,6 +82,7 @@ def get_rain_prism(lat, lon):
 
         latest_image = rain_sum.sort('system:time_start', False).first()
         latest_date = ee.Date(latest_image.get('system:time_start')).format('YYYY-MM-dd').getInfo() if latest_image.getInfo() else None
+        print("Latest rain date:", latest_date)
 
         return rain_mm, latest_date  # Convert meters to mm
     except Exception:
